@@ -1,0 +1,8 @@
+{
+  "server": {
+    "port": 8080
+  },
+  "database": {
+    "connection_string": "postgres://user:password@localhost:15432/academy_portal_service?sslmode=disable"
+  }
+}

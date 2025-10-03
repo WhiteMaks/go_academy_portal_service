@@ -6,10 +6,10 @@ services:
     image: postgres:14.2-alpine
     container_name: academy_portal_service_service_db
     environment:
-      POSTGRES_DB: "academy_portal_service_service"
+      POSTGRES_DB: "academy_portal_service"
       POSTGRES_USER: "user"
       POSTGRES_PASSWORD: "password"
-      PGDATA: "/var/lib/postgresql/data/.database/postgresql"
+      PGDATA: "/var/lib/postgresql/data/.database/.postgresql"
     volumes:
       - .:/var/lib/postgresql/data
     ports:

@@ -1,0 +1,1 @@
+DROP TYPE IF EXISTS root.user_role CASCADE;
