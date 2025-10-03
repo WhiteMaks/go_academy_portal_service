@@ -1,0 +1,16 @@
+version: "3.8"
+
+services:
+
+  postgresql:
+    image: postgres:14.2-alpine
+    container_name: academy_portal_service_service_db
+    environment:
+      POSTGRES_DB: "academy_portal_service_service"
+      POSTGRES_USER: "user"
+      POSTGRES_PASSWORD: "password"
+      PGDATA: "/var/lib/postgresql/data/.database/postgresql"
+    volumes:
+      - .:/var/lib/postgresql/data
+    ports:
+      - "15432:5432"
