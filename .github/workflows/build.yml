@@ -1,0 +1,40 @@
+name: Build academy portal service
+
+on:
+  push:
+    branches: [ "*" ]
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Preparing git branch
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.24'
+
+      - name: Setup git
+        run: make setup-git
+
+      - name: Install dependencies
+        run: make install-dependencies
+
+      - name: Autogenerate-code
+        run: make autogenerate-code
+
+      - name: Autogenerate-mock
+        run: make autogenerate-mock
+
+      - name: Up test environment
+        run: make up-test-environment
+
+      - name: Migrate database
+        run: make migrate-db-up
+
+      - name: Unit test
+        run: make test
