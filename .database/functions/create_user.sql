@@ -13,7 +13,7 @@ BEGIN
 	IF EXISTS (
 		SELECT 1 FROM root.users WHERE username = p_username OR email = p_email
 	) THEN
-		RAISE EXCEPTION 'user with the same username or email already exists' USING ERRCODE = 'P4009';
+		RAISE EXCEPTION 'user with the same username or email already exists' USING ERRCODE = '23505';
 	END IF;
 
 	INSERT INTO
