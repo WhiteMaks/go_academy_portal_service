@@ -9,13 +9,13 @@ import (
 	"testing"
 )
 
-func TestUserRepository_CreateV1_Success(t *testing.T) {
+func TestUserService_CreateUserV1_Success(t *testing.T) {
 	expectedResponse := model.PostUserV1Response{
 		ID: 1,
 	}
 
 	mock := &mockUserRepository{
-		createV1Func: func(ctx context.Context, params database.CreateUserV1Params) (database.RootUser, error) {
+		createUserV1Func: func(ctx context.Context, params database.CreateUserV1Params) (database.RootUser, error) {
 			return database.RootUser{ID: expectedResponse.ID}, nil
 		},
 	}
@@ -31,9 +31,9 @@ func TestUserRepository_CreateV1_Success(t *testing.T) {
 	require.Equal(t, expectedResponse, actualResponse)
 }
 
-func TestUserRepository_CreateV1_Error(t *testing.T) {
+func TestUserService_CreateUserV1_Error(t *testing.T) {
 	mock := &mockUserRepository{
-		createV1Func: func(ctx context.Context, params database.CreateUserV1Params) (database.RootUser, error) {
+		createUserV1Func: func(ctx context.Context, params database.CreateUserV1Params) (database.RootUser, error) {
 			return database.RootUser{}, errors.New("repository error")
 		},
 	}

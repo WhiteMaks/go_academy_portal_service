@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-func TestUserRepository_CreateV1_Success(t *testing.T) {
+func TestUserRepository_CreateUserV1_Success(t *testing.T) {
 	expectedUser := database.RootUser{
 		ID:       1,
 		Username: util.RandomString(64),
@@ -27,7 +27,7 @@ func TestUserRepository_CreateV1_Success(t *testing.T) {
 
 	repository := NewUserRepository(mock)
 
-	actualUser, err := repository.CreateV1(
+	actualUser, err := repository.CreateUserV1(
 		context.Background(),
 		database.CreateUserV1Params{
 			PUsername: expectedUser.Username,
@@ -42,7 +42,7 @@ func TestUserRepository_CreateV1_Success(t *testing.T) {
 	require.Equal(t, expectedUser, actualUser)
 }
 
-func TestUserRepository_CreateV1_Error(t *testing.T) {
+func TestUserRepository_CreateUserV1_Error(t *testing.T) {
 	mock := &mockStore{
 		createUserV1Func: func(ctx context.Context, params database.CreateUserV1Params) (database.RootUser, error) {
 			return database.RootUser{}, errors.New("db error")
@@ -51,7 +51,7 @@ func TestUserRepository_CreateV1_Error(t *testing.T) {
 
 	repo := NewUserRepository(mock)
 
-	_, err := repo.CreateV1(
+	_, err := repo.CreateUserV1(
 		context.Background(),
 		database.CreateUserV1Params{},
 	)

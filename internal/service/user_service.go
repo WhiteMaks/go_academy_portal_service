@@ -28,7 +28,7 @@ func (s *userService) CreateUserV1(ctx context.Context, request model.PostUserV1
 		PIsActive: false,
 	}
 
-	userRecord, err := s.userRepository.CreateV1(ctx, userRecordParams)
+	userRecord, err := s.userRepository.CreateUserV1(ctx, userRecordParams)
 	if err != nil {
 		return model.PostUserV1Response{}, err
 	}

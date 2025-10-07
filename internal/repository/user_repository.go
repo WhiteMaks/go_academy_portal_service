@@ -6,7 +6,7 @@ import (
 )
 
 type UserRepository interface {
-	CreateV1(ctx context.Context, params database.CreateUserV1Params) (database.RootUser, error)
+	CreateUserV1(ctx context.Context, params database.CreateUserV1Params) (database.RootUser, error)
 }
 
 type userRepository struct {
@@ -17,6 +17,6 @@ func NewUserRepository(store database.Store) UserRepository {
 	return &userRepository{store: store}
 }
 
-func (r *userRepository) CreateV1(ctx context.Context, params database.CreateUserV1Params) (database.RootUser, error) {
+func (r *userRepository) CreateUserV1(ctx context.Context, params database.CreateUserV1Params) (database.RootUser, error) {
 	return r.store.CreateUserV1(ctx, params)
 }

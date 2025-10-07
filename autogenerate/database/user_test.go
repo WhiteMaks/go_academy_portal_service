@@ -43,6 +43,7 @@ func TestCreateUserV1_UserExist(t *testing.T) {
 
 	var pqErr *pq.Error
 	ok := errors.As(err, &pqErr)
+
 	require.True(t, ok)
 	require.Equal(t, PgErrUniqueViolation, pqErr.Code)
 	require.Equal(t, "user with the same username or email already exists", pqErr.Message)

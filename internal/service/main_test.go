@@ -8,11 +8,11 @@ import (
 )
 
 type mockUserRepository struct {
-	createV1Func func(ctx context.Context, params database.CreateUserV1Params) (database.RootUser, error)
+	createUserV1Func func(ctx context.Context, params database.CreateUserV1Params) (database.RootUser, error)
 }
 
-func (m *mockUserRepository) CreateV1(ctx context.Context, params database.CreateUserV1Params) (database.RootUser, error) {
-	return m.createV1Func(ctx, params)
+func (m *mockUserRepository) CreateUserV1(ctx context.Context, params database.CreateUserV1Params) (database.RootUser, error) {
+	return m.createUserV1Func(ctx, params)
 }
 
 func TestMain(m *testing.M) {
