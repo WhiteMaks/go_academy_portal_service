@@ -38,3 +38,6 @@ jobs:
 
       - name: Unit test
         run: make test
+
+      - name: Build migration
+        run: make build-migration
