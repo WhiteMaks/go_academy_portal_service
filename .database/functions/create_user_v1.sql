@@ -10,17 +10,18 @@ RETURNS
 DECLARE
 	new_user root.users;
 BEGIN
-	IF EXISTS (
-		SELECT 1 FROM root.users WHERE username = p_username OR email = p_email
-	) THEN
-		RAISE EXCEPTION 'user with the same username or email already exists' USING ERRCODE = '23505';
-	END IF;
-
-	INSERT INTO
-		root.users (username, email, password, role, is_active)
-	VALUES
-		(p_username, p_email, p_password, p_role, p_is_active)
-	RETURNING * INTO new_user;
+	BEGIN
+		INSERT INTO
+			root.users (username, email, password, role, is_active)
+		VALUES
+			(p_username, p_email, p_password, p_role, p_is_active)
+		RETURNING * INTO new_user;
+	EXCEPTION
+		WHEN
+			unique_violation
+		THEN
+			RAISE EXCEPTION 'user with the same username or email already exists' USING ERRCODE = '23505';
+	END;
 
 	RETURN new_user;
 END;
