@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION root.create_user(
+CREATE OR REPLACE FUNCTION root.create_user_v1(
 	p_username VARCHAR(64),
 	p_email VARCHAR(254),
 	p_password VARCHAR(255),

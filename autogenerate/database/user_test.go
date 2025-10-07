@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestCreateUser(t *testing.T) {
+func TestCreateUserV1(t *testing.T) {
 	roles := []RootUserRole{
 		RootUserRoleAdmin,
 		RootUserRoleCoach,
@@ -18,9 +18,9 @@ func TestCreateUser(t *testing.T) {
 
 	for _, role := range roles {
 		t.Run(string(role), func(t *testing.T) {
-			createUserParams := PrepareRandomUserParams(role, true)
+			createUserParams := PrepareRandomUserV1Params(role, true)
 
-			actualRecord, err := testQueries.CreateUser(context.Background(), createUserParams)
+			actualRecord, err := testQueries.CreateUserV1(context.Background(), createUserParams)
 			require.NoError(t, err)
 			require.NotEmpty(t, actualRecord)
 
@@ -30,14 +30,14 @@ func TestCreateUser(t *testing.T) {
 	}
 }
 
-func TestCreateUser_UserExist(t *testing.T) {
-	createUserParams := PrepareRandomUserParams(RootUserRoleAdmin, true)
+func TestCreateUserV1_UserExist(t *testing.T) {
+	createUserParams := PrepareRandomUserV1Params(RootUserRoleAdmin, true)
 
-	actualRecord, err := testQueries.CreateUser(context.Background(), createUserParams)
+	actualRecord, err := testQueries.CreateUserV1(context.Background(), createUserParams)
 	require.NoError(t, err)
 	require.NotEmpty(t, actualRecord)
 
-	actualRecord, err = testQueries.CreateUser(context.Background(), createUserParams)
+	actualRecord, err = testQueries.CreateUserV1(context.Background(), createUserParams)
 	require.Error(t, err)
 	require.Empty(t, actualRecord)
 

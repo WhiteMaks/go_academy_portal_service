@@ -7,8 +7,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func PrepareRandomUserParams(role RootUserRole, isActive bool) CreateUserParams {
-	return CreateUserParams{
+func PrepareRandomUserV1Params(role RootUserRole, isActive bool) CreateUserV1Params {
+	return CreateUserV1Params{
 		PUsername: util.RandomString(30),
 		PEmail:    util.RandomString(30),
 		PPassword: util.RandomString(30),
@@ -17,7 +17,7 @@ func PrepareRandomUserParams(role RootUserRole, isActive bool) CreateUserParams 
 	}
 }
 
-func PrepareUserRecord(t *testing.T, actual RootUser, queryParams CreateUserParams) RootUser {
+func PrepareUserRecord(t *testing.T, actual RootUser, queryParams CreateUserV1Params) RootUser {
 	actual.Username = queryParams.PUsername
 	actual.Email = queryParams.PEmail
 	actual.Password = queryParams.PPassword

@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION root.is_admin_creation_allowed()
+CREATE OR REPLACE FUNCTION root.is_admin_creation_allowed_v1()
 RETURNS BOOLEAN AS $$
 BEGIN
 	RETURN NOT EXISTS (
