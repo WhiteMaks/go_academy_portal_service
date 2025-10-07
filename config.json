@@ -1,5 +1,5 @@
 {
-  "server": {
+  "microservice": {
     "port": 8080
   },
   "database": {

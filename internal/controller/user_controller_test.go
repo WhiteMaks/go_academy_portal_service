@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/WhiteMaks/go_academy_portal_service/autogenerate/database"
 	"github.com/WhiteMaks/go_academy_portal_service/internal/model"
+	"github.com/WhiteMaks/go_academy_portal_service/internal/route"
 	"github.com/WhiteMaks/go_academy_portal_service/util"
 	"github.com/gin-gonic/gin"
 	"github.com/lib/pq"
@@ -29,7 +30,7 @@ func TestUserController_CreateUserV1_201(t *testing.T) {
 	testContext, _ := gin.CreateTestContext(recorder)
 
 	request := tPreparePostRequest(
-		"/user/v1",
+		route.ApiUserV1,
 		model.PostUserV1Request{
 			Username: util.RandomString(64),
 			Email:    util.RandomString(254),
@@ -98,7 +99,7 @@ func TestUserController_CreateUserV1_400(t *testing.T) {
 
 			recorder := httptest.NewRecorder()
 			testContext, _ := gin.CreateTestContext(recorder)
-			request := tPreparePostRequest("/user/v1", test.errorRequestBody)
+			request := tPreparePostRequest(route.ApiUserV1, test.errorRequestBody)
 
 			testContext.Request = request
 
@@ -131,7 +132,7 @@ func TestUserController_CreateUserV1_409(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	testContext, _ := gin.CreateTestContext(recorder)
 	request := tPreparePostRequest(
-		"/user/v1",
+		route.ApiUserV1,
 		model.PostUserV1Request{
 			Username: util.RandomString(64),
 			Email:    util.RandomString(254),
@@ -168,7 +169,7 @@ func TestUserController_CreateUserV1_500(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	testContext, _ := gin.CreateTestContext(recorder)
 	request := tPreparePostRequest(
-		"/user/v1",
+		route.ApiUserV1,
 		model.PostUserV1Request{
 			Username: util.RandomString(64),
 			Email:    util.RandomString(254),

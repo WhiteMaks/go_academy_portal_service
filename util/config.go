@@ -3,11 +3,11 @@ package util
 import "github.com/spf13/viper"
 
 type Config struct {
-	Server   Server   `mapstructure:"server"`
-	Database Database `mapstructure:"database"`
+	Microservice Microservice `mapstructure:"microservice"`
+	Database     Database     `mapstructure:"database"`
 }
 
-type Server struct {
+type Microservice struct {
 	Port int `mapstructure:"port"`
 }
 

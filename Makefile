@@ -26,4 +26,7 @@ test:
 build-migration:
 	go build -o .bin/academy_portal_service/migration ./cmd/migration/main.go
 
-.PHONY: setup-git install-dependencies migrate-db-up migrate-db-down autogenerate-code autogenerate-mock up-test-environment test build-migration
+build-microservice:
+	go build -o .bin/academy_portal_service/microservice ./cmd/microservice/main.go
+
+.PHONY: setup-git install-dependencies migrate-db-up migrate-db-down autogenerate-code autogenerate-mock up-test-environment test build-migration build-microservice

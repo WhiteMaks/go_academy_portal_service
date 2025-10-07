@@ -36,8 +36,11 @@ jobs:
       - name: Migrate database
         run: make migrate-db-up
 
-      - name: Unit test
+      - name: Unit tests
         run: make test
 
       - name: Build migration
         run: make build-migration
+
+      - name: Build microservice
+        run: make build-microservice
