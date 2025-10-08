@@ -33,7 +33,6 @@ func TestUserController_CreateUserV1_201(t *testing.T) {
 		route.ApiUserV1,
 		model.PostUserV1Request{
 			Username: util.RandomString(64),
-			Email:    util.RandomString(254),
 			Password: util.RandomString(255),
 		},
 	)
@@ -62,15 +61,6 @@ func TestUserController_CreateUserV1_400(t *testing.T) {
 			name:                 "Without Username",
 			expectedErrorMessage: "Key: 'PostUserV1Request.Username' Error:Field validation for 'Username' failed on the 'required' tag",
 			errorRequestBody: model.PostUserV1Request{
-				Email:    util.RandomString(254),
-				Password: util.RandomString(255),
-			},
-		},
-		{
-			name:                 "Without Email",
-			expectedErrorMessage: "Key: 'PostUserV1Request.Email' Error:Field validation for 'Email' failed on the 'required' tag",
-			errorRequestBody: model.PostUserV1Request{
-				Username: util.RandomString(64),
 				Password: util.RandomString(255),
 			},
 		},
@@ -79,7 +69,6 @@ func TestUserController_CreateUserV1_400(t *testing.T) {
 			expectedErrorMessage: "Key: 'PostUserV1Request.Password' Error:Field validation for 'Password' failed on the 'required' tag",
 			errorRequestBody: model.PostUserV1Request{
 				Username: util.RandomString(64),
-				Email:    util.RandomString(254),
 			},
 		},
 	}
@@ -135,7 +124,6 @@ func TestUserController_CreateUserV1_409(t *testing.T) {
 		route.ApiUserV1,
 		model.PostUserV1Request{
 			Username: util.RandomString(64),
-			Email:    util.RandomString(254),
 			Password: util.RandomString(255),
 		},
 	)
@@ -172,7 +160,6 @@ func TestUserController_CreateUserV1_500(t *testing.T) {
 		route.ApiUserV1,
 		model.PostUserV1Request{
 			Username: util.RandomString(64),
-			Email:    util.RandomString(254),
 			Password: util.RandomString(255),
 		},
 	)
