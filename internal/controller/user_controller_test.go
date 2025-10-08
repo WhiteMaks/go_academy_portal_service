@@ -33,7 +33,7 @@ func TestUserController_CreateUserV1_201(t *testing.T) {
 		route.ApiUserV1,
 		model.PostUserV1Request{
 			Username: util.RandomString(64),
-			Password: util.RandomString(255),
+			Password: util.RandomString(64),
 		},
 	)
 
@@ -61,7 +61,7 @@ func TestUserController_CreateUserV1_400(t *testing.T) {
 			name:                 "Without Username",
 			expectedErrorMessage: "Key: 'PostUserV1Request.Username' Error:Field validation for 'Username' failed on the 'required' tag",
 			errorRequestBody: model.PostUserV1Request{
-				Password: util.RandomString(255),
+				Password: util.RandomString(64),
 			},
 		},
 		{
@@ -69,6 +69,38 @@ func TestUserController_CreateUserV1_400(t *testing.T) {
 			expectedErrorMessage: "Key: 'PostUserV1Request.Password' Error:Field validation for 'Password' failed on the 'required' tag",
 			errorRequestBody: model.PostUserV1Request{
 				Username: util.RandomString(64),
+			},
+		},
+		{
+			name:                 "Min username length",
+			expectedErrorMessage: "Key: 'PostUserV1Request.Username' Error:Field validation for 'Username' failed on the 'min' tag",
+			errorRequestBody: model.PostUserV1Request{
+				Username: util.RandomString(4),
+				Password: util.RandomString(64),
+			},
+		},
+		{
+			name:                 "Min password length",
+			expectedErrorMessage: "Key: 'PostUserV1Request.Password' Error:Field validation for 'Password' failed on the 'min' tag",
+			errorRequestBody: model.PostUserV1Request{
+				Username: util.RandomString(64),
+				Password: util.RandomString(7),
+			},
+		},
+		{
+			name:                 "Max username length",
+			expectedErrorMessage: "Key: 'PostUserV1Request.Username' Error:Field validation for 'Username' failed on the 'max' tag",
+			errorRequestBody: model.PostUserV1Request{
+				Username: util.RandomString(65),
+				Password: util.RandomString(64),
+			},
+		},
+		{
+			name:                 "Max password length",
+			expectedErrorMessage: "Key: 'PostUserV1Request.Password' Error:Field validation for 'Password' failed on the 'max' tag",
+			errorRequestBody: model.PostUserV1Request{
+				Username: util.RandomString(64),
+				Password: util.RandomString(65),
 			},
 		},
 	}
@@ -124,7 +156,7 @@ func TestUserController_CreateUserV1_409(t *testing.T) {
 		route.ApiUserV1,
 		model.PostUserV1Request{
 			Username: util.RandomString(64),
-			Password: util.RandomString(255),
+			Password: util.RandomString(64),
 		},
 	)
 
@@ -160,7 +192,7 @@ func TestUserController_CreateUserV1_500(t *testing.T) {
 		route.ApiUserV1,
 		model.PostUserV1Request{
 			Username: util.RandomString(64),
-			Password: util.RandomString(255),
+			Password: util.RandomString(64),
 		},
 	)
 
