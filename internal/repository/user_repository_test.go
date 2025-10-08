@@ -13,7 +13,6 @@ func TestUserRepository_CreateUserV1_Success(t *testing.T) {
 	expectedUser := database.RootUser{
 		ID:       1,
 		Username: util.RandomString(64),
-		Email:    util.RandomString(254),
 		Password: util.RandomString(255),
 		Role:     database.RootUserRoleAthlete,
 		IsActive: true,
@@ -31,7 +30,6 @@ func TestUserRepository_CreateUserV1_Success(t *testing.T) {
 		context.Background(),
 		database.CreateUserV1Params{
 			PUsername: expectedUser.Username,
-			PEmail:    expectedUser.Email,
 			PPassword: expectedUser.Password,
 			PRole:     expectedUser.Role,
 			PIsActive: expectedUser.IsActive,

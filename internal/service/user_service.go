@@ -22,7 +22,6 @@ func NewUserService(userRepository repository.UserRepository) UserService {
 func (s *userService) CreateUserV1(ctx context.Context, request model.PostUserV1Request) (model.PostUserV1Response, error) {
 	userRecordParams := database.CreateUserV1Params{
 		PUsername: request.Username,
-		PEmail:    request.Email,
 		PPassword: request.Password,
 		PRole:     database.RootUserRoleAthlete,
 		PIsActive: false,

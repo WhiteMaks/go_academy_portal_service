@@ -10,7 +10,6 @@ import (
 func PrepareRandomUserV1Params(role RootUserRole, isActive bool) CreateUserV1Params {
 	return CreateUserV1Params{
 		PUsername: util.RandomString(30),
-		PEmail:    util.RandomString(30),
 		PPassword: util.RandomString(30),
 		PRole:     role,
 		PIsActive: isActive,
@@ -19,7 +18,6 @@ func PrepareRandomUserV1Params(role RootUserRole, isActive bool) CreateUserV1Par
 
 func PrepareUserRecord(t *testing.T, actual RootUser, queryParams CreateUserV1Params) RootUser {
 	actual.Username = queryParams.PUsername
-	actual.Email = queryParams.PEmail
 	actual.Password = queryParams.PPassword
 	actual.Role = queryParams.PRole
 	actual.IsActive = queryParams.PIsActive
