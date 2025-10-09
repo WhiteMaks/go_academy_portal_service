@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"github.com/WhiteMaks/go_academy_portal_service/autogenerate/database"
 	"github.com/WhiteMaks/go_academy_portal_service/internal/model"
 	"github.com/WhiteMaks/go_academy_portal_service/internal/repository"
 )
@@ -20,11 +19,9 @@ func NewUserService(userRepository repository.UserRepository) UserService {
 }
 
 func (s *userService) CreateUserV1(ctx context.Context, request model.PostUserV1Request) (model.PostUserV1Response, error) {
-	userRecordParams := database.CreateUserV1Params{
-		PUsername: request.Username,
-		PPassword: request.Password,
-		PRole:     database.RootUserRoleAthlete,
-		PIsActive: false,
+	userRecordParams, err := PrepareCreateUserV1RecordParams(request)
+	if err != nil {
+		return model.PostUserV1Response{}, err
 	}
 
 	userRecord, err := s.userRepository.CreateUserV1(ctx, userRecordParams)

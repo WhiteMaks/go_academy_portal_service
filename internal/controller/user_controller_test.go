@@ -103,6 +103,14 @@ func TestUserController_CreateUserV1_400(t *testing.T) {
 				Password: util.RandomString(65),
 			},
 		},
+		{
+			name:                 "Username with special characters",
+			expectedErrorMessage: "Key: 'PostUserV1Request.Username' Error:Field validation for 'Username' failed on the 'alphanum' tag",
+			errorRequestBody: model.PostUserV1Request{
+				Username: "123$%^&*авыва",
+				Password: util.RandomString(64),
+			},
+		},
 	}
 
 	for _, test := range tests {

@@ -5,27 +5,34 @@ import (
 	"errors"
 	"github.com/WhiteMaks/go_academy_portal_service/autogenerate/database"
 	"github.com/WhiteMaks/go_academy_portal_service/internal/model"
+	"github.com/WhiteMaks/go_academy_portal_service/util"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
 
 func TestUserService_CreateUserV1_Success(t *testing.T) {
+	request := model.PostUserV1Request{
+		Username: util.RandomString(64),
+		Password: util.RandomString(64),
+	}
+
 	expectedResponse := model.PostUserV1Response{
 		ID: 1,
 	}
 
 	mock := &mockUserRepository{
 		createUserV1Func: func(ctx context.Context, params database.CreateUserV1Params) (database.RootUser, error) {
+			err := util.CheckPassword(request.Password, params.PPassword)
+
+			require.NoError(t, err)
+
 			return database.RootUser{ID: expectedResponse.ID}, nil
 		},
 	}
 
 	service := NewUserService(mock)
 
-	actualResponse, err := service.CreateUserV1(
-		context.Background(),
-		model.PostUserV1Request{},
-	)
+	actualResponse, err := service.CreateUserV1(context.Background(), request)
 
 	require.NoError(t, err)
 	require.Equal(t, expectedResponse, actualResponse)
