@@ -56,3 +56,46 @@ func TestUserRepository_CreateUserV1_Error(t *testing.T) {
 
 	require.Error(t, err)
 }
+
+func TestUserRepository_GetUserByUsernameV1_Success(t *testing.T) {
+	expectedUser := database.RootUser{
+		ID:       1,
+		Username: util.RandomString(64),
+		Password: util.RandomString(255),
+		Role:     database.RootUserRoleAthlete,
+		IsActive: true,
+	}
+
+	mock := &mockStore{
+		getUserByUsernameV1Func: func(ctx context.Context, username string) (database.RootUser, error) {
+			return expectedUser, nil
+		},
+	}
+
+	repository := NewUserRepository(mock)
+
+	actualUser, err := repository.GetUserByUsernameV1(
+		context.Background(),
+		expectedUser.Username,
+	)
+
+	require.NoError(t, err)
+	require.Equal(t, expectedUser, actualUser)
+}
+
+func TestUserRepository_GetUserByUsernameV1_Error(t *testing.T) {
+	mock := &mockStore{
+		getUserByUsernameV1Func: func(ctx context.Context, username string) (database.RootUser, error) {
+			return database.RootUser{}, errors.New("db error")
+		},
+	}
+
+	repo := NewUserRepository(mock)
+
+	_, err := repo.GetUserByUsernameV1(
+		context.Background(),
+		"username",
+	)
+
+	require.Error(t, err)
+}

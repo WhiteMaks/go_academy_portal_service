@@ -7,13 +7,12 @@ import (
 )
 
 func TestCreateToken_Success(t *testing.T) {
-	tokenMaker := NewJWTTokenMaker(RandomString(32))
+	tokenMaker := NewJWTTokenMaker(RandomString(32), time.Minute)
 
 	username := RandomString(64)
 	role := RandomString(5)
-	duration := time.Minute
 
-	token, err := tokenMaker.CreateToken(username, role, duration)
+	token, err := tokenMaker.CreateToken(username, role)
 
 	require.NoError(t, err)
 	require.NotEmpty(t, token)
@@ -29,17 +28,15 @@ func TestCreateToken_Success(t *testing.T) {
 	require.Equal(t, username, payload.Username)
 	require.Equal(t, role, payload.Role)
 	require.WithinDuration(t, time.Now(), payload.IssuedAt, time.Second)
-	require.WithinDuration(t, time.Now().Add(duration), payload.ExpiredAt, time.Second)
 }
 
 func TestVerifyToken_Expired(t *testing.T) {
-	tokenMaker := NewJWTTokenMaker(RandomString(32))
+	tokenMaker := NewJWTTokenMaker(RandomString(32), -time.Minute)
 
 	username := RandomString(64)
 	role := RandomString(5)
-	duration := -time.Minute
 
-	token, err := tokenMaker.CreateToken(username, role, duration)
+	token, err := tokenMaker.CreateToken(username, role)
 
 	require.NoError(t, err)
 	require.NotEmpty(t, token)

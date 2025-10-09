@@ -4,18 +4,24 @@ import (
 	"context"
 	"github.com/WhiteMaks/go_academy_portal_service/internal/model"
 	"github.com/WhiteMaks/go_academy_portal_service/internal/repository"
+	"github.com/WhiteMaks/go_academy_portal_service/util"
 )
 
 type UserService interface {
 	CreateUserV1(ctx context.Context, request model.PostUserV1Request) (model.PostUserV1Response, error)
+	GenerateUserTokenV1(ctx context.Context, request model.PostUserTokenV1Request) (model.PostUserTokenV1Response, error)
 }
 
 type userService struct {
 	userRepository repository.UserRepository
+	tokenMaker     util.TokenMaker
 }
 
-func NewUserService(userRepository repository.UserRepository) UserService {
-	return &userService{userRepository: userRepository}
+func NewUserService(userRepository repository.UserRepository, tokenMaker util.TokenMaker) UserService {
+	return &userService{
+		userRepository: userRepository,
+		tokenMaker:     tokenMaker,
+	}
 }
 
 func (s *userService) CreateUserV1(ctx context.Context, request model.PostUserV1Request) (model.PostUserV1Response, error) {
@@ -31,6 +37,29 @@ func (s *userService) CreateUserV1(ctx context.Context, request model.PostUserV1
 
 	response := model.PostUserV1Response{
 		ID: userRecord.ID,
+	}
+
+	return response, nil
+}
+
+func (s *userService) GenerateUserTokenV1(ctx context.Context, request model.PostUserTokenV1Request) (model.PostUserTokenV1Response, error) {
+	userRecord, err := s.userRepository.GetUserByUsernameV1(ctx, request.Username)
+	if err != nil {
+		return model.PostUserTokenV1Response{}, err
+	}
+
+	err = util.CheckPassword(request.Password, userRecord.Password)
+	if err != nil {
+		return model.PostUserTokenV1Response{}, err
+	}
+
+	token, err := s.tokenMaker.CreateToken(userRecord.Username, string(userRecord.Role))
+	if err != nil {
+		return model.PostUserTokenV1Response{}, err
+	}
+
+	response := model.PostUserTokenV1Response{
+		Token: token,
 	}
 
 	return response, nil

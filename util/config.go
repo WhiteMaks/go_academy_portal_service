@@ -1,6 +1,9 @@
 package util
 
-import "github.com/spf13/viper"
+import (
+	"github.com/spf13/viper"
+	"time"
+)
 
 type Config struct {
 	Microservice Microservice `mapstructure:"microservice"`
@@ -8,7 +11,9 @@ type Config struct {
 }
 
 type Microservice struct {
-	Port int `mapstructure:"port"`
+	Port          int           `mapstructure:"port"`
+	TokenKey      string        `mapstructure:"token_key"`
+	TokenLifeTime time.Duration `mapstructure:"token_life_time"`
 }
 
 type Database struct {

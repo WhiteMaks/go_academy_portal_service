@@ -19,7 +19,7 @@ BEGIN
 		WHEN
 			unique_violation
 		THEN
-			RAISE EXCEPTION 'user with the same username or email already exists' USING ERRCODE = '23505';
+			RAISE EXCEPTION 'user with the same username already exists' USING ERRCODE = '23505';
 	END;
 
 	RETURN new_user;

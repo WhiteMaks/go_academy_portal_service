@@ -1,6 +1,8 @@
 {
   "microservice": {
-    "port": 8080
+    "port": 8080,
+    "token_key": "secret_token_key",
+    "token_life_time": "720h"
   },
   "database": {
     "connection_string": "postgres://user:password@localhost:15432/academy_portal_service?sslmode=disable"

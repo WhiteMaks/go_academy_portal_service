@@ -149,12 +149,12 @@ func TestUserController_CreateUserV1_400(t *testing.T) {
 func TestUserController_CreateUserV1_409(t *testing.T) {
 	expectedStatusCode := http.StatusConflict
 	expectedResponseBody := model.ErrorResponse{
-		Message: "pq: user with the same username or email already exists",
+		Message: "pq: user with the same username already exists",
 	}
 
 	mock := &mockUserService{
 		createUserV1Func: func(ctx context.Context, request model.PostUserV1Request) (model.PostUserV1Response, error) {
-			return model.PostUserV1Response{}, &pq.Error{Code: database.PgErrUniqueViolation, Message: "user with the same username or email already exists"}
+			return model.PostUserV1Response{}, &pq.Error{Code: database.PgErrUniqueViolation, Message: "user with the same username already exists"}
 		},
 	}
 
@@ -208,6 +208,134 @@ func TestUserController_CreateUserV1_500(t *testing.T) {
 
 	controller := NewUserController(mock)
 	controller.CreateUserV1(testContext)
+
+	actualStatusCode := recorder.Code
+
+	var actualResponseBody model.ErrorResponse
+	tPrepareResponse(recorder.Body, &actualResponseBody)
+
+	require.Equal(t, expectedStatusCode, actualStatusCode)
+	require.Equal(t, expectedResponseBody, actualResponseBody)
+}
+
+func TestUserController_GenerateUserTokenV1_200(t *testing.T) {
+	expectedStatusCode := http.StatusOK
+	expectedResponseBody := model.PostUserTokenV1Response{
+		Token: "token",
+	}
+
+	mock := &mockUserService{
+		generateUserTokenV1Func: func(ctx context.Context, request model.PostUserTokenV1Request) (model.PostUserTokenV1Response, error) {
+			return expectedResponseBody, nil
+		},
+	}
+
+	recorder := httptest.NewRecorder()
+	testContext, _ := gin.CreateTestContext(recorder)
+
+	request := tPreparePostRequest(
+		route.ApiUserTokenV1,
+		model.PostUserTokenV1Request{
+			Username: util.RandomString(64),
+			Password: util.RandomString(64),
+		},
+	)
+
+	testContext.Request = request
+
+	controller := NewUserController(mock)
+	controller.GenerateUserTokenV1(testContext)
+
+	actualStatusCode := recorder.Code
+
+	var actualResponseBody model.PostUserTokenV1Response
+	tPrepareResponse(recorder.Body, &actualResponseBody)
+
+	require.Equal(t, expectedStatusCode, actualStatusCode)
+	require.Equal(t, expectedResponseBody, actualResponseBody)
+}
+
+func TestUserController_GenerateUserTokenV1_400(t *testing.T) {
+	tests := []struct {
+		name                 string
+		expectedErrorMessage string
+		errorRequestBody     model.PostUserTokenV1Request
+	}{
+		{
+			name:                 "Without Username",
+			expectedErrorMessage: "Key: 'PostUserTokenV1Request.Username' Error:Field validation for 'Username' failed on the 'required' tag",
+			errorRequestBody: model.PostUserTokenV1Request{
+				Password: util.RandomString(64),
+			},
+		},
+		{
+			name:                 "Without Password",
+			expectedErrorMessage: "Key: 'PostUserTokenV1Request.Password' Error:Field validation for 'Password' failed on the 'required' tag",
+			errorRequestBody: model.PostUserTokenV1Request{
+				Username: util.RandomString(64),
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			expectedStatusCode := http.StatusBadRequest
+			expectedResponseBody := model.ErrorResponse{
+				Message: test.expectedErrorMessage,
+			}
+
+			mock := &mockUserService{
+				generateUserTokenV1Func: func(ctx context.Context, request model.PostUserTokenV1Request) (model.PostUserTokenV1Response, error) {
+					return model.PostUserTokenV1Response{}, nil
+				},
+			}
+
+			recorder := httptest.NewRecorder()
+			testContext, _ := gin.CreateTestContext(recorder)
+			request := tPreparePostRequest(route.ApiUserTokenV1, test.errorRequestBody)
+
+			testContext.Request = request
+
+			controller := NewUserController(mock)
+			controller.GenerateUserTokenV1(testContext)
+
+			actualStatusCode := recorder.Code
+
+			var actualResponseBody model.ErrorResponse
+			tPrepareResponse(recorder.Body, &actualResponseBody)
+
+			require.Equal(t, expectedStatusCode, actualStatusCode)
+			require.Equal(t, expectedResponseBody, actualResponseBody)
+		})
+	}
+}
+
+func TestUserController_GenerateUserTokenV1_401(t *testing.T) {
+	expectedStatusCode := http.StatusUnauthorized
+	expectedResponseBody := model.ErrorResponse{
+		Message: "invalid credentials",
+	}
+
+	mock := &mockUserService{
+		generateUserTokenV1Func: func(ctx context.Context, request model.PostUserTokenV1Request) (model.PostUserTokenV1Response, error) {
+			return model.PostUserTokenV1Response{}, &pq.Error{Code: database.PgErrNoDataFound, Message: "user with given username not found"}
+		},
+	}
+
+	recorder := httptest.NewRecorder()
+	testContext, _ := gin.CreateTestContext(recorder)
+	request := tPreparePostRequest(
+		route.ApiUserTokenV1,
+		model.PostUserTokenV1Request{
+			Username: util.RandomString(64),
+			Password: util.RandomString(64),
+		},
+	)
+
+	testContext.Request = request
+
+	controller := NewUserController(mock)
+	controller.GenerateUserTokenV1(testContext)
 
 	actualStatusCode := recorder.Code
 

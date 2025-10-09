@@ -6,30 +6,41 @@ import (
 	"github.com/WhiteMaks/go_academy_portal_service/internal/repository"
 	"github.com/WhiteMaks/go_academy_portal_service/internal/route"
 	"github.com/WhiteMaks/go_academy_portal_service/internal/service"
+	"github.com/WhiteMaks/go_academy_portal_service/util"
 	"github.com/gin-gonic/gin"
+	"strconv"
 )
 
 type Microservice struct {
-	store  database.Store
-	Router *gin.Engine
+	address    string
+	store      database.Store
+	tokenMaker util.TokenMaker
+	Router     *gin.Engine
 }
 
-func NewMicroservice(store database.Store) *Microservice {
-	result := &Microservice{store: store}
+func NewMicroservice(config util.Microservice, store database.Store) *Microservice {
+	tokenMaker := util.NewJWTTokenMaker(config.TokenKey, config.TokenLifeTime)
 
-	userRepository := repository.NewUserRepository(result.store)
-	userService := service.NewUserService(userRepository)
+	ms := &Microservice{
+		store:      store,
+		tokenMaker: tokenMaker,
+		address:    "0.0.0.0:" + strconv.Itoa(config.Port),
+	}
+
+	userRepository := repository.NewUserRepository(ms.store)
+	userService := service.NewUserService(userRepository, ms.tokenMaker)
 	userController := controller.NewUserController(userService)
 
 	router := gin.Default()
 
 	router.POST(route.ApiUserV1, userController.CreateUserV1)
+	router.POST(route.ApiUserTokenV1, userController.GenerateUserTokenV1)
 
-	result.Router = router
+	ms.Router = router
 
-	return result
+	return ms
 }
 
-func (ms *Microservice) Start(address string) error {
-	return ms.Router.Run(address)
+func (ms *Microservice) Start() error {
+	return ms.Router.Run(ms.address)
 }

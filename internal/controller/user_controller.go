@@ -12,6 +12,7 @@ import (
 
 type UserController interface {
 	CreateUserV1(ctx *gin.Context)
+	GenerateUserTokenV1(ctx *gin.Context)
 }
 
 type userController struct {
@@ -44,4 +45,22 @@ func (c *userController) CreateUserV1(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusCreated, response)
+}
+
+func (c *userController) GenerateUserTokenV1(ctx *gin.Context) {
+	var request model.PostUserTokenV1Request
+
+	err := ctx.ShouldBindJSON(&request)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, service.PrepareErrorResponse(err))
+		return
+	}
+
+	response, err := c.service.GenerateUserTokenV1(ctx, request)
+	if err != nil {
+		ctx.JSON(http.StatusUnauthorized, service.PrepareErrorResponse(errors.New("invalid credentials")))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, response)
 }

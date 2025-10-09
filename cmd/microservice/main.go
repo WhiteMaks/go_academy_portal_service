@@ -8,7 +8,6 @@ import (
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
 	"log"
-	"strconv"
 )
 
 func main() {
@@ -26,8 +25,8 @@ func main() {
 
 	store := database.NewStore(dbConnection)
 
-	server := microservice.NewMicroservice(store)
-	err = server.Start("0.0.0.0:" + strconv.Itoa(config.Microservice.Port))
+	ms := microservice.NewMicroservice(config.Microservice, store)
+	err = ms.Start()
 	if err != nil {
 		log.Fatal("failed to start the server:", err)
 	}

@@ -51,22 +51,24 @@ func (payload *Payload) Valid() error {
 }
 
 type TokenMaker interface {
-	CreateToken(username string, role string, duration time.Duration) (string, error)
+	CreateToken(username string, role string) (string, error)
 	VerifyToken(token string) (*Payload, error)
 }
 
 type JWTTokenMaker struct {
 	secretKey string
+	duration  time.Duration
 }
 
-func NewJWTTokenMaker(secretKey string) TokenMaker {
+func NewJWTTokenMaker(secretKey string, duration time.Duration) TokenMaker {
 	return &JWTTokenMaker{
 		secretKey: secretKey,
+		duration:  duration,
 	}
 }
 
-func (maker *JWTTokenMaker) CreateToken(username string, role string, duration time.Duration) (string, error) {
-	payload := NewTokenPayload(username, role, duration)
+func (maker *JWTTokenMaker) CreateToken(username string, role string) (string, error) {
+	payload := NewTokenPayload(username, role, maker.duration)
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, payload)
 	return token.SignedString([]byte(maker.secretKey))

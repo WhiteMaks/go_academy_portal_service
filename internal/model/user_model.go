@@ -8,3 +8,12 @@ type PostUserV1Request struct {
 type PostUserV1Response struct {
 	ID int64 `json:"id"`
 }
+
+type PostUserTokenV1Request struct {
+	Username string `json:"username" binding:"required"`
+	Password string `json:"password" binding:"required"`
+}
+
+type PostUserTokenV1Response struct {
+	Token string `json:"token"`
+}
