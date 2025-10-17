@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"github.com/WhiteMaks/go_academy_portal_service/autogenerate/database"
 	"github.com/WhiteMaks/go_academy_portal_service/internal/middleware"
 	"github.com/WhiteMaks/go_academy_portal_service/internal/model"
@@ -264,6 +265,109 @@ func TestUserController_CreateUserV1_500(t *testing.T) {
 
 	actualStatusCode := recorder.Code
 
+	var actualResponseBody model.ErrorResponse
+	tPrepareResponse(recorder.Body, &actualResponseBody)
+
+	require.Equal(t, expectedStatusCode, actualStatusCode)
+	require.Equal(t, expectedResponseBody, actualResponseBody)
+}
+
+func TestUserController_CreateAdminV1_201(t *testing.T) {
+	expectedStatusCode := http.StatusCreated
+	expectedResponseBody := model.PostUserV1Response{
+		ID: 1,
+	}
+
+	mock := &mockUserService{
+		createAdminV1Func: func(ctx context.Context, request model.PostUserV1Request) (model.PostUserV1Response, error) {
+			return expectedResponseBody, nil
+		},
+	}
+
+	recorder := httptest.NewRecorder()
+	testContext, _ := gin.CreateTestContext(recorder)
+
+	request := tPreparePostRequest(
+		route.ApiUserAdminV1,
+		model.PostUserV1Request{
+			Username: util.RandomString(64),
+			Password: util.RandomString(64),
+		},
+	)
+
+	testContext.Request = request
+
+	controller := NewUserController(mock)
+	controller.CreateAdminV1(testContext)
+
+	actualStatusCode := recorder.Code
+
+	var actualResponseBody model.PostUserV1Response
+	tPrepareResponse(recorder.Body, &actualResponseBody)
+
+	require.Equal(t, expectedStatusCode, actualStatusCode)
+	require.Equal(t, expectedResponseBody, actualResponseBody)
+}
+
+func TestUserController_CreateAdminV1_404(t *testing.T) {
+	expectedStatusCode := http.StatusNotFound
+	expectedResponseBody := service.PrepareEmptyResponse()
+
+	mock := &mockUserService{
+		createAdminV1Func: func(ctx context.Context, request model.PostUserV1Request) (model.PostUserV1Response, error) {
+			return model.PostUserV1Response{}, service.ErrAdminCreationIsNotAllowed
+		},
+	}
+
+	recorder := httptest.NewRecorder()
+	testContext, _ := gin.CreateTestContext(recorder)
+	request := tPreparePostRequest(
+		route.ApiUserAdminV1,
+		model.PostUserV1Request{
+			Username: util.RandomString(64),
+			Password: util.RandomString(64),
+		},
+	)
+
+	testContext.Request = request
+
+	controller := NewUserController(mock)
+	controller.CreateAdminV1(testContext)
+
+	actualStatusCode := recorder.Code
+	var actualResponseBody model.EmptyResponse
+	tPrepareResponse(recorder.Body, &actualResponseBody)
+
+	require.Equal(t, expectedStatusCode, actualStatusCode)
+	require.Equal(t, expectedResponseBody, actualResponseBody)
+}
+
+func TestUserController_CreateAdminV1_500(t *testing.T) {
+	expectedStatusCode := http.StatusInternalServerError
+	expectedResponseBody := service.PrepareErrorResponse(errors.New("service error"))
+
+	mock := &mockUserService{
+		createAdminV1Func: func(ctx context.Context, request model.PostUserV1Request) (model.PostUserV1Response, error) {
+			return model.PostUserV1Response{}, errors.New("service error")
+		},
+	}
+
+	recorder := httptest.NewRecorder()
+	testContext, _ := gin.CreateTestContext(recorder)
+	request := tPreparePostRequest(
+		route.ApiUserAdminV1,
+		model.PostUserV1Request{
+			Username: util.RandomString(64),
+			Password: util.RandomString(64),
+		},
+	)
+
+	testContext.Request = request
+
+	controller := NewUserController(mock)
+	controller.CreateAdminV1(testContext)
+
+	actualStatusCode := recorder.Code
 	var actualResponseBody model.ErrorResponse
 	tPrepareResponse(recorder.Body, &actualResponseBody)
 

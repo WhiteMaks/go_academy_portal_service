@@ -35,6 +35,7 @@ func NewMicroservice(config util.Microservice, store database.Store) *Microservi
 	router := gin.Default()
 
 	router.POST(route.ApiUserTokenV1, userController.GenerateUserTokenV1)
+	router.POST(route.ApiUserAdminV1, userController.CreateAdminV1)
 
 	authRoutes := router.Group("/").
 		Use(middleware.AuthMiddleware(ms.tokenMaker))

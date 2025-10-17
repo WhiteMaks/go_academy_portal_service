@@ -14,6 +14,7 @@ import (
 
 type UserController interface {
 	CreateUserV1(ctx *gin.Context)
+	CreateAdminV1(ctx *gin.Context)
 	GenerateUserTokenV1(ctx *gin.Context)
 }
 
@@ -54,6 +55,28 @@ func (c *userController) CreateUserV1(ctx *gin.Context) {
 		if errors.As(err, &pqErr) && pqErr.Code == database.PgErrUniqueViolation {
 			ctx.JSON(http.StatusConflict, service.PrepareErrorResponse(err))
 			return
+		}
+
+		ctx.JSON(http.StatusInternalServerError, service.PrepareErrorResponse(err))
+		return
+	}
+
+	ctx.JSON(http.StatusCreated, response)
+}
+
+func (c *userController) CreateAdminV1(ctx *gin.Context) {
+	var request model.PostUserV1Request
+
+	err := ctx.ShouldBindJSON(&request)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, service.PrepareErrorResponse(err))
+		return
+	}
+
+	response, err := c.userService.CreateAdminV1(ctx, request)
+	if err != nil {
+		if errors.Is(err, service.ErrAdminCreationIsNotAllowed) {
+			ctx.JSON(http.StatusNotFound, service.PrepareEmptyResponse())
 		}
 
 		ctx.JSON(http.StatusInternalServerError, service.PrepareErrorResponse(err))

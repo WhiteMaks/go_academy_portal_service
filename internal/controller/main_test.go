@@ -12,12 +12,17 @@ import (
 
 type mockUserService struct {
 	createUserV1Func        func(ctx context.Context, request model.PostUserV1Request) (model.PostUserV1Response, error)
+	createAdminV1Func       func(ctx context.Context, request model.PostUserV1Request) (model.PostUserV1Response, error)
 	generateUserTokenV1Func func(ctx context.Context, request model.PostUserTokenV1Request) (model.PostUserTokenV1Response, error)
 	hasAccessFunc           func(ctx context.Context, payload *util.Payload, roles []database.RootUserRole) bool
 }
 
 func (m *mockUserService) CreateUserV1(ctx context.Context, request model.PostUserV1Request) (model.PostUserV1Response, error) {
 	return m.createUserV1Func(ctx, request)
+}
+
+func (m *mockUserService) CreateAdminV1(ctx context.Context, request model.PostUserV1Request) (model.PostUserV1Response, error) {
+	return m.createAdminV1Func(ctx, request)
 }
 
 func (m *mockUserService) GenerateUserTokenV1(ctx context.Context, request model.PostUserTokenV1Request) (model.PostUserTokenV1Response, error) {

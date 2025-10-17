@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"github.com/WhiteMaks/go_academy_portal_service/autogenerate/database"
 	"github.com/WhiteMaks/go_academy_portal_service/util"
@@ -98,4 +99,36 @@ func TestUserRepository_GetUserByUsernameV1_Error(t *testing.T) {
 	)
 
 	require.Error(t, err)
+}
+
+func TestUserRepository_IsAdminCreationAllowedV1_Success(t *testing.T) {
+	mock := &mockStore{
+		isAdminCreationAllowedV1Func: func(ctx context.Context) (sql.NullBool, error) {
+			return sql.NullBool{Bool: true, Valid: true}, nil
+		},
+	}
+
+	repository := NewUserRepository(mock)
+
+	isAllowed, err := repository.IsAdminCreationAllowedV1(context.Background())
+
+	require.NoError(t, err)
+	require.True(t, isAllowed.Bool)
+	require.True(t, isAllowed.Valid)
+}
+
+func TestUserRepository_IsAdminCreationAllowedV1_Error(t *testing.T) {
+	mock := &mockStore{
+		isAdminCreationAllowedV1Func: func(ctx context.Context) (sql.NullBool, error) {
+			return sql.NullBool{Valid: false}, errors.New("db error")
+		},
+	}
+
+	repository := NewUserRepository(mock)
+
+	isAllowed, err := repository.IsAdminCreationAllowedV1(context.Background())
+
+	require.Error(t, err)
+	require.False(t, isAllowed.Bool)
+	require.False(t, isAllowed.Valid)
 }
