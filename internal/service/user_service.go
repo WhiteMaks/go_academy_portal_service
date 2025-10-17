@@ -2,14 +2,17 @@ package service
 
 import (
 	"context"
+	"github.com/WhiteMaks/go_academy_portal_service/autogenerate/database"
 	"github.com/WhiteMaks/go_academy_portal_service/internal/model"
 	"github.com/WhiteMaks/go_academy_portal_service/internal/repository"
 	"github.com/WhiteMaks/go_academy_portal_service/util"
+	"slices"
 )
 
 type UserService interface {
 	CreateUserV1(ctx context.Context, request model.PostUserV1Request) (model.PostUserV1Response, error)
 	GenerateUserTokenV1(ctx context.Context, request model.PostUserTokenV1Request) (model.PostUserTokenV1Response, error)
+	HasAccess(ctx context.Context, payload *util.Payload, roles []database.RootUserRole) bool
 }
 
 type userService struct {
@@ -63,4 +66,17 @@ func (s *userService) GenerateUserTokenV1(ctx context.Context, request model.Pos
 	}
 
 	return response, nil
+}
+
+func (s *userService) HasAccess(ctx context.Context, payload *util.Payload, roles []database.RootUserRole) bool {
+	userRecord, err := s.userRepository.GetUserByUsernameV1(ctx, payload.Username)
+	if err != nil {
+		return false
+	}
+
+	if !slices.Contains(roles, userRecord.Role) {
+		return false
+	}
+
+	return true
 }

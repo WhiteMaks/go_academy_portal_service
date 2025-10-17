@@ -3,8 +3,10 @@ package controller
 import (
 	"context"
 	"github.com/WhiteMaks/go_academy_portal_service/autogenerate/database"
+	"github.com/WhiteMaks/go_academy_portal_service/internal/middleware"
 	"github.com/WhiteMaks/go_academy_portal_service/internal/model"
 	"github.com/WhiteMaks/go_academy_portal_service/internal/route"
+	"github.com/WhiteMaks/go_academy_portal_service/internal/service"
 	"github.com/WhiteMaks/go_academy_portal_service/util"
 	"github.com/gin-gonic/gin"
 	"github.com/lib/pq"
@@ -12,6 +14,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 )
 
 func TestUserController_CreateUserV1_201(t *testing.T) {
@@ -23,6 +26,9 @@ func TestUserController_CreateUserV1_201(t *testing.T) {
 	mock := &mockUserService{
 		createUserV1Func: func(ctx context.Context, request model.PostUserV1Request) (model.PostUserV1Response, error) {
 			return expectedResponseBody, nil
+		},
+		hasAccessFunc: func(ctx context.Context, payload *util.Payload, roles []database.RootUserRole) bool {
+			return true
 		},
 	}
 
@@ -38,6 +44,7 @@ func TestUserController_CreateUserV1_201(t *testing.T) {
 	)
 
 	testContext.Request = request
+	testContext.Set(middleware.AuthorizationPayload, util.NewTokenPayload("admin", string(database.RootUserRoleAdmin), time.Second))
 
 	controller := NewUserController(mock)
 	controller.CreateUserV1(testContext)
@@ -124,6 +131,9 @@ func TestUserController_CreateUserV1_400(t *testing.T) {
 				createUserV1Func: func(ctx context.Context, request model.PostUserV1Request) (model.PostUserV1Response, error) {
 					return model.PostUserV1Response{}, nil
 				},
+				hasAccessFunc: func(ctx context.Context, payload *util.Payload, roles []database.RootUserRole) bool {
+					return true
+				},
 			}
 
 			recorder := httptest.NewRecorder()
@@ -131,6 +141,7 @@ func TestUserController_CreateUserV1_400(t *testing.T) {
 			request := tPreparePostRequest(route.ApiUserV1, test.errorRequestBody)
 
 			testContext.Request = request
+			testContext.Set(middleware.AuthorizationPayload, util.NewTokenPayload("admin", string(database.RootUserRoleAdmin), time.Second))
 
 			controller := NewUserController(mock)
 			controller.CreateUserV1(testContext)
@@ -146,15 +157,13 @@ func TestUserController_CreateUserV1_400(t *testing.T) {
 	}
 }
 
-func TestUserController_CreateUserV1_409(t *testing.T) {
-	expectedStatusCode := http.StatusConflict
-	expectedResponseBody := model.ErrorResponse{
-		Message: "pq: user with the same username already exists",
-	}
+func TestUserController_CreateUserV1_403(t *testing.T) {
+	expectedStatusCode := http.StatusForbidden
+	expectedResponseBody := service.PrepareForbiddenErrorResponse()
 
 	mock := &mockUserService{
-		createUserV1Func: func(ctx context.Context, request model.PostUserV1Request) (model.PostUserV1Response, error) {
-			return model.PostUserV1Response{}, &pq.Error{Code: database.PgErrUniqueViolation, Message: "user with the same username already exists"}
+		hasAccessFunc: func(ctx context.Context, payload *util.Payload, roles []database.RootUserRole) bool {
+			return false
 		},
 	}
 
@@ -169,6 +178,46 @@ func TestUserController_CreateUserV1_409(t *testing.T) {
 	)
 
 	testContext.Request = request
+	testContext.Set(middleware.AuthorizationPayload, util.NewTokenPayload("admin", string(database.RootUserRoleAthlete), time.Second))
+
+	controller := NewUserController(mock)
+	controller.CreateUserV1(testContext)
+
+	actualStatusCode := recorder.Code
+	var actualResponseBody model.ErrorResponse
+	tPrepareResponse(recorder.Body, &actualResponseBody)
+
+	require.Equal(t, expectedStatusCode, actualStatusCode)
+	require.Equal(t, expectedResponseBody, actualResponseBody)
+}
+
+func TestUserController_CreateUserV1_409(t *testing.T) {
+	expectedStatusCode := http.StatusConflict
+	expectedResponseBody := model.ErrorResponse{
+		Message: "pq: user with the same username already exists",
+	}
+
+	mock := &mockUserService{
+		createUserV1Func: func(ctx context.Context, request model.PostUserV1Request) (model.PostUserV1Response, error) {
+			return model.PostUserV1Response{}, &pq.Error{Code: database.PgErrUniqueViolation, Message: "user with the same username already exists"}
+		},
+		hasAccessFunc: func(ctx context.Context, payload *util.Payload, roles []database.RootUserRole) bool {
+			return true
+		},
+	}
+
+	recorder := httptest.NewRecorder()
+	testContext, _ := gin.CreateTestContext(recorder)
+	request := tPreparePostRequest(
+		route.ApiUserV1,
+		model.PostUserV1Request{
+			Username: util.RandomString(64),
+			Password: util.RandomString(64),
+		},
+	)
+
+	testContext.Request = request
+	testContext.Set(middleware.AuthorizationPayload, util.NewTokenPayload("admin", string(database.RootUserRoleAdmin), time.Second))
 
 	controller := NewUserController(mock)
 	controller.CreateUserV1(testContext)
@@ -192,6 +241,9 @@ func TestUserController_CreateUserV1_500(t *testing.T) {
 		createUserV1Func: func(ctx context.Context, request model.PostUserV1Request) (model.PostUserV1Response, error) {
 			return model.PostUserV1Response{}, &pq.Error{Code: "99999", Message: "some db error"}
 		},
+		hasAccessFunc: func(ctx context.Context, payload *util.Payload, roles []database.RootUserRole) bool {
+			return true
+		},
 	}
 
 	recorder := httptest.NewRecorder()
@@ -205,6 +257,7 @@ func TestUserController_CreateUserV1_500(t *testing.T) {
 	)
 
 	testContext.Request = request
+	testContext.Set(middleware.AuthorizationPayload, util.NewTokenPayload("admin", string(database.RootUserRoleAdmin), time.Second))
 
 	controller := NewUserController(mock)
 	controller.CreateUserV1(testContext)

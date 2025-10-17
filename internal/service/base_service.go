@@ -1,10 +1,15 @@
 package service
 
 import (
+	"errors"
 	"github.com/WhiteMaks/go_academy_portal_service/autogenerate/database"
 	"github.com/WhiteMaks/go_academy_portal_service/internal/model"
 	"github.com/WhiteMaks/go_academy_portal_service/util"
 )
+
+func PrepareForbiddenErrorResponse() model.ErrorResponse {
+	return PrepareErrorResponse(errors.New("forbidden"))
+}
 
 func PrepareErrorResponse(err error) model.ErrorResponse {
 	return model.ErrorResponse{

@@ -3,6 +3,7 @@ package microservice
 import (
 	"github.com/WhiteMaks/go_academy_portal_service/autogenerate/database"
 	"github.com/WhiteMaks/go_academy_portal_service/internal/controller"
+	"github.com/WhiteMaks/go_academy_portal_service/internal/middleware"
 	"github.com/WhiteMaks/go_academy_portal_service/internal/repository"
 	"github.com/WhiteMaks/go_academy_portal_service/internal/route"
 	"github.com/WhiteMaks/go_academy_portal_service/internal/service"
@@ -33,8 +34,12 @@ func NewMicroservice(config util.Microservice, store database.Store) *Microservi
 
 	router := gin.Default()
 
-	router.POST(route.ApiUserV1, userController.CreateUserV1)
 	router.POST(route.ApiUserTokenV1, userController.GenerateUserTokenV1)
+
+	authRoutes := router.Group("/").
+		Use(middleware.AuthMiddleware(ms.tokenMaker))
+
+	authRoutes.POST(route.ApiUserV1, userController.CreateUserV1)
 
 	ms.Router = router
 

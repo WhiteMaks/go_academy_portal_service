@@ -3,8 +3,10 @@ package controller
 import (
 	"errors"
 	"github.com/WhiteMaks/go_academy_portal_service/autogenerate/database"
+	"github.com/WhiteMaks/go_academy_portal_service/internal/middleware"
 	"github.com/WhiteMaks/go_academy_portal_service/internal/model"
 	"github.com/WhiteMaks/go_academy_portal_service/internal/service"
+	"github.com/WhiteMaks/go_academy_portal_service/util"
 	"github.com/gin-gonic/gin"
 	"github.com/lib/pq"
 	"net/http"
@@ -16,11 +18,11 @@ type UserController interface {
 }
 
 type userController struct {
-	service service.UserService
+	userService service.UserService
 }
 
 func NewUserController(service service.UserService) UserController {
-	return &userController{service: service}
+	return &userController{userService: service}
 }
 
 func (c *userController) CreateUserV1(ctx *gin.Context) {
@@ -32,7 +34,21 @@ func (c *userController) CreateUserV1(ctx *gin.Context) {
 		return
 	}
 
-	response, err := c.service.CreateUserV1(ctx, request)
+	payload := ctx.MustGet(middleware.AuthorizationPayload).(*util.Payload)
+	hasAccess := c.userService.HasAccess(
+		ctx,
+		payload,
+		[]database.RootUserRole{
+			database.RootUserRoleAdmin,
+			database.RootUserRoleCoach,
+		},
+	)
+	if !hasAccess {
+		ctx.JSON(http.StatusForbidden, service.PrepareForbiddenErrorResponse())
+		return
+	}
+
+	response, err := c.userService.CreateUserV1(ctx, request)
 	if err != nil {
 		var pqErr *pq.Error
 		if errors.As(err, &pqErr) && pqErr.Code == database.PgErrUniqueViolation {
@@ -56,7 +72,7 @@ func (c *userController) GenerateUserTokenV1(ctx *gin.Context) {
 		return
 	}
 
-	response, err := c.service.GenerateUserTokenV1(ctx, request)
+	response, err := c.userService.GenerateUserTokenV1(ctx, request)
 	if err != nil {
 		ctx.JSON(http.StatusUnauthorized, service.PrepareErrorResponse(errors.New("invalid credentials")))
 		return
