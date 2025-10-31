@@ -3,11 +3,12 @@ package service
 import (
 	"context"
 	"errors"
+	"slices"
+
 	"github.com/WhiteMaks/go_academy_portal_service/autogenerate/database"
 	"github.com/WhiteMaks/go_academy_portal_service/internal/model"
 	"github.com/WhiteMaks/go_academy_portal_service/internal/repository"
 	"github.com/WhiteMaks/go_academy_portal_service/util"
-	"slices"
 )
 
 var (
@@ -34,7 +35,7 @@ func NewUserService(userRepository repository.UserRepository, tokenMaker util.To
 }
 
 func (s *userService) CreateUserV1(ctx context.Context, request model.PostUserV1Request) (model.PostUserV1Response, error) {
-	userRecordParams, err := PrepareCreateUserV1RecordParams(request, database.RootUserRoleAthlete)
+	userRecordParams, err := PrepareCreateUserV1RecordParams(request, database.RootUserRoleAthlete, true)
 	if err != nil {
 		return model.PostUserV1Response{}, err
 	}
@@ -61,7 +62,7 @@ func (s *userService) CreateAdminV1(ctx context.Context, request model.PostUserV
 		return model.PostUserV1Response{}, ErrAdminCreationIsNotAllowed
 	}
 
-	userRecordParams, err := PrepareCreateUserV1RecordParams(request, database.RootUserRoleAdmin)
+	userRecordParams, err := PrepareCreateUserV1RecordParams(request, database.RootUserRoleAdmin, true)
 	if err != nil {
 		return model.PostUserV1Response{}, err
 	}

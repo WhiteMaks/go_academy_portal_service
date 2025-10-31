@@ -2,12 +2,13 @@ package main
 
 import (
 	"database/sql"
+	"log"
+
 	"github.com/WhiteMaks/go_academy_portal_service/autogenerate/database"
 	"github.com/WhiteMaks/go_academy_portal_service/internal/microservice"
 	"github.com/WhiteMaks/go_academy_portal_service/util"
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
-	"log"
 )
 
 func main() {

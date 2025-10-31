@@ -2,6 +2,8 @@ package controller
 
 import (
 	"errors"
+	"net/http"
+
 	"github.com/WhiteMaks/go_academy_portal_service/autogenerate/database"
 	"github.com/WhiteMaks/go_academy_portal_service/internal/middleware"
 	"github.com/WhiteMaks/go_academy_portal_service/internal/model"
@@ -9,7 +11,6 @@ import (
 	"github.com/WhiteMaks/go_academy_portal_service/util"
 	"github.com/gin-gonic/gin"
 	"github.com/lib/pq"
-	"net/http"
 )
 
 type UserController interface {
@@ -77,6 +78,7 @@ func (c *userController) CreateAdminV1(ctx *gin.Context) {
 	if err != nil {
 		if errors.Is(err, service.ErrAdminCreationIsNotAllowed) {
 			ctx.JSON(http.StatusNotFound, service.PrepareEmptyResponse())
+			return
 		}
 
 		ctx.JSON(http.StatusInternalServerError, service.PrepareErrorResponse(err))

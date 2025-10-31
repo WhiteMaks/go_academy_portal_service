@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+
 	"github.com/WhiteMaks/go_academy_portal_service/autogenerate/database"
 	"github.com/WhiteMaks/go_academy_portal_service/internal/model"
 	"github.com/WhiteMaks/go_academy_portal_service/util"
@@ -21,7 +22,7 @@ func PrepareErrorResponse(err error) model.ErrorResponse {
 	}
 }
 
-func PrepareCreateUserV1RecordParams(request model.PostUserV1Request, role database.RootUserRole) (database.CreateUserV1Params, error) {
+func PrepareCreateUserV1RecordParams(request model.PostUserV1Request, role database.RootUserRole, isActive bool) (database.CreateUserV1Params, error) {
 	hashPassword, err := util.HashPassword(request.Password)
 	if err != nil {
 		return database.CreateUserV1Params{}, err
@@ -31,7 +32,7 @@ func PrepareCreateUserV1RecordParams(request model.PostUserV1Request, role datab
 		PUsername: request.Username,
 		PPassword: hashPassword,
 		PRole:     role,
-		PIsActive: false,
+		PIsActive: isActive,
 	}
 
 	return userRecordParams, nil
