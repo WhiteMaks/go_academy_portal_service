@@ -4,12 +4,13 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"testing"
+	"time"
+
 	"github.com/WhiteMaks/go_academy_portal_service/autogenerate/database"
 	"github.com/WhiteMaks/go_academy_portal_service/internal/model"
 	"github.com/WhiteMaks/go_academy_portal_service/util"
 	"github.com/stretchr/testify/require"
-	"testing"
-	"time"
 )
 
 func TestUserService_CreateUserV1_Success(t *testing.T) {

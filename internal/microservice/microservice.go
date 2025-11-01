@@ -1,6 +1,8 @@
 package microservice
 
 import (
+	"strconv"
+
 	"github.com/WhiteMaks/go_academy_portal_service/autogenerate/database"
 	"github.com/WhiteMaks/go_academy_portal_service/internal/controller"
 	"github.com/WhiteMaks/go_academy_portal_service/internal/middleware"
@@ -9,7 +11,6 @@ import (
 	"github.com/WhiteMaks/go_academy_portal_service/internal/service"
 	"github.com/WhiteMaks/go_academy_portal_service/util"
 	"github.com/gin-gonic/gin"
-	"strconv"
 )
 
 type Microservice struct {
@@ -29,10 +30,16 @@ func NewMicroservice(config util.Microservice, store database.Store) *Microservi
 	}
 
 	userRepository := repository.NewUserRepository(ms.store)
+
+	microserviceService := service.NewMicroserviceService(userRepository)
 	userService := service.NewUserService(userRepository, ms.tokenMaker)
+
+	microserviceController := controller.NewMicroserviceController(microserviceService)
 	userController := controller.NewUserController(userService)
 
 	router := gin.Default()
+
+	router.GET(route.ApiMicroserviceV1, microserviceController.GetMicroserviceV1)
 
 	router.POST(route.ApiUserTokenV1, userController.GenerateUserTokenV1)
 	router.POST(route.ApiUserAdminV1, userController.CreateAdminV1)
