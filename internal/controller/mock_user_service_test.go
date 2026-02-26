@@ -9,10 +9,15 @@ import (
 )
 
 type mockUserService struct {
+	getUserV1Func           func(ctx context.Context, username string) (model.GetUserV1Response, error)
 	createUserV1Func        func(ctx context.Context, request model.PostUserV1Request) (model.PostUserV1Response, error)
 	createAdminV1Func       func(ctx context.Context, request model.PostUserV1Request) (model.PostUserV1Response, error)
 	generateUserTokenV1Func func(ctx context.Context, request model.PostUserTokenV1Request) (model.PostUserTokenV1Response, error)
 	hasAccessFunc           func(ctx context.Context, payload *util.Payload, roles []database.RootUserRole) bool
+}
+
+func (m *mockUserService) GetUserV1(ctx context.Context, username string) (model.GetUserV1Response, error) {
+	return m.getUserV1Func(ctx, username)
 }
 
 func (m *mockUserService) CreateUserV1(ctx context.Context, request model.PostUserV1Request) (model.PostUserV1Response, error) {

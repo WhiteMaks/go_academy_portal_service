@@ -19,6 +19,66 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestUserController_GetUserV1_200(t *testing.T) {
+	expectedStatusCode := http.StatusOK
+	expectedResponseBody := model.GetUserV1Response{
+		ID:       util.RandomInt(0, 1_000_000),
+		Username: util.RandomString(64),
+		Role:     string(database.RootUserRoleAdmin),
+	}
+
+	mock := &mockUserService{
+		getUserV1Func: func(ctx context.Context, username string) (model.GetUserV1Response, error) {
+			return expectedResponseBody, nil
+		},
+	}
+
+	recorder := httptest.NewRecorder()
+	testContext, _ := gin.CreateTestContext(recorder)
+
+	testContext.Set(middleware.AuthorizationPayload, util.NewTokenPayload(expectedResponseBody.Username, string(database.RootUserRoleAdmin), time.Second))
+
+	controller := NewUserController(mock)
+	controller.GetUserV1(testContext)
+
+	actualStatusCode := recorder.Code
+
+	var actualResponseBody model.GetUserV1Response
+	tPrepareResponse(recorder.Body, &actualResponseBody)
+
+	require.Equal(t, expectedStatusCode, actualStatusCode)
+	require.Equal(t, expectedResponseBody, actualResponseBody)
+}
+
+func TestUserController_GetUserV1_500(t *testing.T) {
+	expectedStatusCode := http.StatusInternalServerError
+	expectedResponseBody := model.ErrorResponse{
+		Message: "pq: some db error",
+	}
+
+	mock := &mockUserService{
+		getUserV1Func: func(ctx context.Context, username string) (model.GetUserV1Response, error) {
+			return model.GetUserV1Response{}, &pq.Error{Code: "99999", Message: "some db error"}
+		},
+	}
+
+	recorder := httptest.NewRecorder()
+	testContext, _ := gin.CreateTestContext(recorder)
+
+	testContext.Set(middleware.AuthorizationPayload, util.NewTokenPayload("admin", string(database.RootUserRoleAdmin), time.Second))
+
+	controller := NewUserController(mock)
+	controller.GetUserV1(testContext)
+
+	actualStatusCode := recorder.Code
+
+	var actualResponseBody model.ErrorResponse
+	tPrepareResponse(recorder.Body, &actualResponseBody)
+
+	require.Equal(t, expectedStatusCode, actualStatusCode)
+	require.Equal(t, expectedResponseBody, actualResponseBody)
+}
+
 func TestUserController_CreateUserV1_201(t *testing.T) {
 	expectedStatusCode := http.StatusCreated
 	expectedResponseBody := model.PostUserV1Response{

@@ -1,0 +1,1 @@
+docker exec -it academy_portal_service_service_db psql "postgres://user:password@localhost:5432/academy_portal_service?sslmode=disable"

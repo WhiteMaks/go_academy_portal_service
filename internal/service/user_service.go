@@ -16,6 +16,7 @@ var (
 )
 
 type UserService interface {
+	GetUserV1(ctx context.Context, username string) (model.GetUserV1Response, error)
 	CreateUserV1(ctx context.Context, request model.PostUserV1Request) (model.PostUserV1Response, error)
 	CreateAdminV1(ctx context.Context, request model.PostUserV1Request) (model.PostUserV1Response, error)
 	GenerateUserTokenV1(ctx context.Context, request model.PostUserTokenV1Request) (model.PostUserTokenV1Response, error)
@@ -32,6 +33,21 @@ func NewUserService(userRepository repository.UserRepository, tokenMaker util.To
 		userRepository: userRepository,
 		tokenMaker:     tokenMaker,
 	}
+}
+
+func (s *userService) GetUserV1(ctx context.Context, username string) (model.GetUserV1Response, error) {
+	userRecord, err := s.userRepository.GetUserByUsernameV1(ctx, username)
+	if err != nil {
+		return model.GetUserV1Response{}, err
+	}
+
+	response := model.GetUserV1Response{
+		ID:       userRecord.ID,
+		Username: userRecord.Username,
+		Role:     string(userRecord.Role),
+	}
+
+	return response, nil
 }
 
 func (s *userService) CreateUserV1(ctx context.Context, request model.PostUserV1Request) (model.PostUserV1Response, error) {

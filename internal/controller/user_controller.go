@@ -14,6 +14,7 @@ import (
 )
 
 type UserController interface {
+	GetUserV1(ctx *gin.Context)
 	CreateUserV1(ctx *gin.Context)
 	CreateAdminV1(ctx *gin.Context)
 	GenerateUserTokenV1(ctx *gin.Context)
@@ -25,6 +26,18 @@ type userController struct {
 
 func NewUserController(service service.UserService) UserController {
 	return &userController{userService: service}
+}
+
+func (c *userController) GetUserV1(ctx *gin.Context) {
+	payload := ctx.MustGet(middleware.AuthorizationPayload).(*util.Payload)
+
+	response, err := c.userService.GetUserV1(ctx, payload.Username)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, service.PrepareErrorResponse(err))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, response)
 }
 
 func (c *userController) CreateUserV1(ctx *gin.Context) {

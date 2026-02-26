@@ -17,3 +17,9 @@ type PostUserTokenV1Request struct {
 type PostUserTokenV1Response struct {
 	Token string `json:"token"`
 }
+
+type GetUserV1Response struct {
+	ID       int64  `json:"id"`
+	Username string `json:"username"`
+	Role     string `json:"role"`
+}

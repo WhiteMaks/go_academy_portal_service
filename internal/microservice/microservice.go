@@ -2,6 +2,7 @@ package microservice
 
 import (
 	"strconv"
+	"time"
 
 	"github.com/WhiteMaks/go_academy_portal_service/autogenerate/database"
 	"github.com/WhiteMaks/go_academy_portal_service/internal/controller"
@@ -10,6 +11,7 @@ import (
 	"github.com/WhiteMaks/go_academy_portal_service/internal/route"
 	"github.com/WhiteMaks/go_academy_portal_service/internal/service"
 	"github.com/WhiteMaks/go_academy_portal_service/util"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -39,6 +41,15 @@ func NewMicroservice(config util.Microservice, store database.Store) *Microservi
 
 	router := gin.Default()
 
+	router.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"http://localhost:3000"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
+
 	router.GET(route.ApiMicroserviceV1, microserviceController.GetMicroserviceV1)
 
 	router.POST(route.ApiUserTokenV1, userController.GenerateUserTokenV1)
@@ -47,6 +58,7 @@ func NewMicroservice(config util.Microservice, store database.Store) *Microservi
 	authRoutes := router.Group("/").
 		Use(middleware.AuthMiddleware(ms.tokenMaker))
 
+	authRoutes.GET(route.ApiUserV1, userController.GetUserV1)
 	authRoutes.POST(route.ApiUserV1, userController.CreateUserV1)
 
 	ms.Router = router

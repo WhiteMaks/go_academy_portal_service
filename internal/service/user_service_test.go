@@ -13,6 +13,48 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestUserService_GetUserV1_Success(t *testing.T) {
+	userRecord := database.RootUser{
+		ID:       util.RandomInt(0, 1_000_000),
+		Username: util.RandomString(8),
+		Password: "hashed_password",
+		Role:     database.RootUserRoleAdmin,
+	}
+
+	expectedResponse := model.GetUserV1Response{
+		ID:       userRecord.ID,
+		Username: userRecord.Username,
+		Role:     string(userRecord.Role),
+	}
+
+	mock := &mockUserRepository{
+		getUserByUsernameV1Func: func(ctx context.Context, username string) (database.RootUser, error) {
+			return userRecord, nil
+		},
+	}
+
+	service := NewUserService(mock, util.NewJWTTokenMaker("secret", time.Minute))
+
+	actualResponse, err := service.GetUserV1(context.Background(), expectedResponse.Username)
+
+	require.NoError(t, err)
+	require.Equal(t, expectedResponse, actualResponse)
+}
+
+func TestUserService_GetUserV1_Error(t *testing.T) {
+	mock := &mockUserRepository{
+		getUserByUsernameV1Func: func(ctx context.Context, username string) (database.RootUser, error) {
+			return database.RootUser{}, errors.New("repository error")
+		},
+	}
+
+	service := NewUserService(mock, util.NewJWTTokenMaker("secret", time.Minute))
+
+	_, err := service.GetUserV1(context.Background(), util.RandomString(16))
+
+	require.Error(t, err)
+}
+
 func TestUserService_CreateUserV1_Success(t *testing.T) {
 	request := model.PostUserV1Request{
 		Username: util.RandomString(64),
