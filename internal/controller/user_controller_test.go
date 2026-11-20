@@ -536,7 +536,7 @@ func TestUserController_GenerateUserTokenV1_401(t *testing.T) {
 
 	mock := &mockUserService{
 		generateUserTokenV1Func: func(ctx context.Context, request model.PostUserTokenV1Request) (model.PostUserTokenV1Response, error) {
-			return model.PostUserTokenV1Response{}, &pq.Error{Code: database.PgErrNoDataFound, Message: "user with given username not found"}
+			return model.PostUserTokenV1Response{}, service.ErrInvalidCredentials
 		},
 	}
 
@@ -562,4 +562,32 @@ func TestUserController_GenerateUserTokenV1_401(t *testing.T) {
 
 	require.Equal(t, expectedStatusCode, actualStatusCode)
 	require.Equal(t, expectedResponseBody, actualResponseBody)
+}
+
+func TestUserController_GenerateUserTokenV1_500(t *testing.T) {
+	const internalDetails = "database connection password detail"
+	expectedResponseBody := model.ErrorResponse{Message: "internal server error"}
+
+	mock := &mockUserService{
+		generateUserTokenV1Func: func(ctx context.Context, request model.PostUserTokenV1Request) (model.PostUserTokenV1Response, error) {
+			return model.PostUserTokenV1Response{}, errors.New(internalDetails)
+		},
+	}
+
+	recorder := httptest.NewRecorder()
+	testContext, _ := gin.CreateTestContext(recorder)
+	testContext.Request = tPreparePostRequest(route.ApiUserTokenV1, model.PostUserTokenV1Request{
+		Username: util.RandomString(16),
+		Password: util.RandomString(16),
+	})
+
+	controller := NewUserController(mock)
+	controller.GenerateUserTokenV1(testContext)
+
+	var actualResponseBody model.ErrorResponse
+	tPrepareResponse(recorder.Body, &actualResponseBody)
+
+	require.Equal(t, http.StatusInternalServerError, recorder.Code)
+	require.Equal(t, expectedResponseBody, actualResponseBody)
+	require.NotContains(t, recorder.Body.String(), internalDetails)
 }

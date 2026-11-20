@@ -9,10 +9,13 @@ import (
 	"github.com/WhiteMaks/go_academy_portal_service/internal/model"
 	"github.com/WhiteMaks/go_academy_portal_service/internal/repository"
 	"github.com/WhiteMaks/go_academy_portal_service/util"
+	"github.com/lib/pq"
+	"golang.org/x/crypto/bcrypt"
 )
 
 var (
 	ErrAdminCreationIsNotAllowed = errors.New("admin creation is not allowed")
+	ErrInvalidCredentials        = errors.New("invalid credentials")
 )
 
 type UserService interface {
@@ -98,11 +101,18 @@ func (s *userService) CreateAdminV1(ctx context.Context, request model.PostUserV
 func (s *userService) GenerateUserTokenV1(ctx context.Context, request model.PostUserTokenV1Request) (model.PostUserTokenV1Response, error) {
 	userRecord, err := s.userRepository.GetUserByUsernameV1(ctx, request.Username)
 	if err != nil {
+		var pqErr *pq.Error
+		if errors.As(err, &pqErr) && pqErr.Code == database.PgErrNoDataFound {
+			return model.PostUserTokenV1Response{}, ErrInvalidCredentials
+		}
 		return model.PostUserTokenV1Response{}, err
 	}
 
 	err = util.CheckPassword(request.Password, userRecord.Password)
 	if err != nil {
+		if errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
+			return model.PostUserTokenV1Response{}, ErrInvalidCredentials
+		}
 		return model.PostUserTokenV1Response{}, err
 	}
 

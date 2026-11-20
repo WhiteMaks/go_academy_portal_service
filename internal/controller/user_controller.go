@@ -112,7 +112,12 @@ func (c *userController) GenerateUserTokenV1(ctx *gin.Context) {
 
 	response, err := c.userService.GenerateUserTokenV1(ctx, request)
 	if err != nil {
-		ctx.JSON(http.StatusUnauthorized, service.PrepareErrorResponse(errors.New("invalid credentials")))
+		if errors.Is(err, service.ErrInvalidCredentials) {
+			ctx.JSON(http.StatusUnauthorized, service.PrepareErrorResponse(service.ErrInvalidCredentials))
+			return
+		}
+
+		ctx.JSON(http.StatusInternalServerError, service.PrepareErrorResponse(errors.New("internal server error")))
 		return
 	}
 

@@ -10,8 +10,21 @@ import (
 	"github.com/WhiteMaks/go_academy_portal_service/autogenerate/database"
 	"github.com/WhiteMaks/go_academy_portal_service/internal/model"
 	"github.com/WhiteMaks/go_academy_portal_service/util"
+	"github.com/lib/pq"
 	"github.com/stretchr/testify/require"
 )
+
+type failingUserTokenMaker struct {
+	err error
+}
+
+func (m failingUserTokenMaker) CreateToken(username string, role string) (string, error) {
+	return "", m.err
+}
+
+func (m failingUserTokenMaker) VerifyToken(token string) (*util.Payload, error) {
+	return nil, m.err
+}
 
 func TestUserService_GetUserV1_Success(t *testing.T) {
 	userRecord := database.RootUser{
@@ -223,18 +236,64 @@ func TestUserService_GenerateUserTokenV1_Success(t *testing.T) {
 }
 
 func TestUserService_GenerateUserTokenV1_Error(t *testing.T) {
-	mock := &mockUserRepository{
-		getUserByUsernameV1Func: func(ctx context.Context, username string) (database.RootUser, error) {
-			return database.RootUser{}, errors.New("repository error")
+	request := model.PostUserTokenV1Request{
+		Username: util.RandomString(16),
+		Password: "submitted-password",
+	}
+	validHash, err := util.HashPassword("stored-password")
+	require.NoError(t, err)
+	validSubmittedHash, err := util.HashPassword(request.Password)
+	require.NoError(t, err)
+
+	tests := []struct {
+		name             string
+		user             database.RootUser
+		repositoryError  error
+		tokenMaker       util.TokenMaker
+		wantInvalidCreds bool
+	}{
+		{
+			name:             "unknown username",
+			repositoryError:  &pq.Error{Code: database.PgErrNoDataFound, Message: "username not found"},
+			wantInvalidCreds: true,
+		},
+		{
+			name:             "password mismatch",
+			user:             database.RootUser{Username: request.Username, Password: validHash, Role: database.RootUserRoleAdmin},
+			wantInvalidCreds: true,
+		},
+		{
+			name:            "repository failure",
+			repositoryError: errors.New("database connection detail"),
+		},
+		{
+			name: "invalid stored password hash",
+			user: database.RootUser{Username: request.Username, Password: "invalid-hash", Role: database.RootUserRoleAdmin},
+		},
+		{
+			name:       "token signing failure",
+			user:       database.RootUser{Username: request.Username, Password: validSubmittedHash, Role: database.RootUserRoleAdmin},
+			tokenMaker: failingUserTokenMaker{err: errors.New("token signing detail")},
 		},
 	}
 
-	service := NewUserService(mock, util.NewJWTTokenMaker("secret", time.Minute))
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mock := &mockUserRepository{
+				getUserByUsernameV1Func: func(ctx context.Context, username string) (database.RootUser, error) {
+					return test.user, test.repositoryError
+				},
+			}
+			tokenMaker := test.tokenMaker
+			if tokenMaker == nil {
+				tokenMaker = util.NewJWTTokenMaker("secret", time.Minute)
+			}
 
-	_, err := service.GenerateUserTokenV1(
-		context.Background(),
-		model.PostUserTokenV1Request{},
-	)
+			userService := NewUserService(mock, tokenMaker)
+			_, err := userService.GenerateUserTokenV1(context.Background(), request)
 
-	require.Error(t, err)
+			require.Error(t, err)
+			require.Equal(t, test.wantInvalidCreds, errors.Is(err, ErrInvalidCredentials))
+		})
+	}
 }
