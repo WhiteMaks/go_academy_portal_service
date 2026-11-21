@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"testing"
 	"time"
@@ -124,15 +123,13 @@ func TestUserService_CreateAdminV1_Success(t *testing.T) {
 	}
 
 	mock := &mockUserRepository{
-		isAdminCreationAllowedV1Func: func(ctx context.Context) (sql.NullBool, error) {
-			return sql.NullBool{Bool: true, Valid: true}, nil
-		},
-		createUserV1Func: func(ctx context.Context, params database.CreateUserV1Params) (database.RootUser, error) {
-			err := util.CheckPassword(request.Password, params.PPassword)
+		createAdminV1Func: func(ctx context.Context, username string, password string) (database.RootUser, error) {
+			require.Equal(t, request.Username, username)
+			err := util.CheckPassword(request.Password, password)
 
 			require.NoError(t, err)
 
-			return database.RootUser{ID: expectedResponse.ID}, nil
+			return database.RootUser{ID: expectedResponse.ID, Role: database.RootUserRoleAdmin, IsActive: true}, nil
 		},
 	}
 
@@ -144,12 +141,26 @@ func TestUserService_CreateAdminV1_Success(t *testing.T) {
 	require.Equal(t, expectedResponse, actualResponse)
 }
 
-func TestUserService_CreateAdminV1_IsAdminCreationAllowedV1_Error(t *testing.T) {
+func TestUserService_CreateAdminV1_AlreadyCreated(t *testing.T) {
 	mock := &mockUserRepository{
-		isAdminCreationAllowedV1Func: func(ctx context.Context) (sql.NullBool, error) {
-			return sql.NullBool{}, errors.New("repository error")
+		createAdminV1Func: func(ctx context.Context, username string, password string) (database.RootUser, error) {
+			return database.RootUser{}, &pq.Error{Code: database.PgErrNoDataFound}
 		},
-		createUserV1Func: func(ctx context.Context, params database.CreateUserV1Params) (database.RootUser, error) {
+	}
+
+	service := NewUserService(mock, util.NewJWTTokenMaker("secret", time.Minute))
+
+	_, err := service.CreateAdminV1(
+		context.Background(),
+		model.PostUserV1Request{},
+	)
+
+	require.ErrorIs(t, err, ErrAdminCreationIsNotAllowed)
+}
+
+func TestUserService_CreateAdminV1_RepositoryError(t *testing.T) {
+	mock := &mockUserRepository{
+		createAdminV1Func: func(ctx context.Context, username string, password string) (database.RootUser, error) {
 			return database.RootUser{}, errors.New("repository error")
 		},
 	}
@@ -162,47 +173,6 @@ func TestUserService_CreateAdminV1_IsAdminCreationAllowedV1_Error(t *testing.T) 
 	)
 
 	require.Error(t, err)
-}
-
-func TestUserService_CreateAdminV1_CreateUserV1Func_Error(t *testing.T) {
-	mock := &mockUserRepository{
-		isAdminCreationAllowedV1Func: func(ctx context.Context) (sql.NullBool, error) {
-			return sql.NullBool{Bool: true, Valid: true}, nil
-		},
-		createUserV1Func: func(ctx context.Context, params database.CreateUserV1Params) (database.RootUser, error) {
-			return database.RootUser{}, errors.New("repository error")
-		},
-	}
-
-	service := NewUserService(mock, util.NewJWTTokenMaker("secret", time.Minute))
-
-	_, err := service.CreateAdminV1(
-		context.Background(),
-		model.PostUserV1Request{},
-	)
-
-	require.Error(t, err)
-}
-
-func TestUserService_CreateAdminV1_IsAdminCreationAllowedV1_False(t *testing.T) {
-	mock := &mockUserRepository{
-		isAdminCreationAllowedV1Func: func(ctx context.Context) (sql.NullBool, error) {
-			return sql.NullBool{Bool: false, Valid: true}, nil
-		},
-		createUserV1Func: func(ctx context.Context, params database.CreateUserV1Params) (database.RootUser, error) {
-			return database.RootUser{}, nil
-		},
-	}
-
-	service := NewUserService(mock, util.NewJWTTokenMaker("secret", time.Minute))
-
-	_, err := service.CreateAdminV1(
-		context.Background(),
-		model.PostUserV1Request{},
-	)
-
-	require.Error(t, err)
-	require.Equal(t, ErrAdminCreationIsNotAllowed, err)
 }
 
 func TestUserService_GenerateUserTokenV1_Success(t *testing.T) {

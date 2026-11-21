@@ -94,7 +94,13 @@ func (c *userController) CreateAdminV1(ctx *gin.Context) {
 			return
 		}
 
-		ctx.JSON(http.StatusInternalServerError, service.PrepareErrorResponse(err))
+		var pqErr *pq.Error
+		if errors.As(err, &pqErr) && pqErr.Code == database.PgErrUniqueViolation {
+			ctx.JSON(http.StatusConflict, service.PrepareErrorResponse(errors.New("username already exists")))
+			return
+		}
+
+		ctx.JSON(http.StatusInternalServerError, service.PrepareErrorResponse(errors.New("internal server error")))
 		return
 	}
 

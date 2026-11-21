@@ -8,9 +8,14 @@ import (
 )
 
 type mockUserRepository struct {
+	createAdminV1Func            func(ctx context.Context, username string, password string) (database.RootUser, error)
 	createUserV1Func             func(ctx context.Context, params database.CreateUserV1Params) (database.RootUser, error)
 	getUserByUsernameV1Func      func(ctx context.Context, username string) (database.RootUser, error)
 	isAdminCreationAllowedV1Func func(ctx context.Context) (sql.NullBool, error)
+}
+
+func (m *mockUserRepository) CreateAdminV1(ctx context.Context, username string, password string) (database.RootUser, error) {
+	return m.createAdminV1Func(ctx, username, password)
 }
 
 func (m *mockUserRepository) CreateUserV1(ctx context.Context, params database.CreateUserV1Params) (database.RootUser, error) {

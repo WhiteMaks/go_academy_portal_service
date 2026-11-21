@@ -72,22 +72,17 @@ func (s *userService) CreateUserV1(ctx context.Context, request model.PostUserV1
 }
 
 func (s *userService) CreateAdminV1(ctx context.Context, request model.PostUserV1Request) (model.PostUserV1Response, error) {
-	isAdminCreationAllowed, err := s.userRepository.IsAdminCreationAllowedV1(ctx)
+	passwordHash, err := util.HashPassword(request.Password)
 	if err != nil {
 		return model.PostUserV1Response{}, err
 	}
 
-	if !isAdminCreationAllowed.Valid || !isAdminCreationAllowed.Bool {
-		return model.PostUserV1Response{}, ErrAdminCreationIsNotAllowed
-	}
-
-	userRecordParams, err := PrepareCreateUserV1RecordParams(request, database.RootUserRoleAdmin, true)
+	userRecord, err := s.userRepository.CreateAdminV1(ctx, request.Username, passwordHash)
 	if err != nil {
-		return model.PostUserV1Response{}, err
-	}
-
-	userRecord, err := s.userRepository.CreateUserV1(ctx, userRecordParams)
-	if err != nil {
+		var pqErr *pq.Error
+		if errors.As(err, &pqErr) && pqErr.Code == database.PgErrNoDataFound {
+			return model.PostUserV1Response{}, ErrAdminCreationIsNotAllowed
+		}
 		return model.PostUserV1Response{}, err
 	}
 

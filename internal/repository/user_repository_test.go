@@ -10,6 +10,26 @@ import (
 	"testing"
 )
 
+func TestUserRepository_CreateAdminV1_Success(t *testing.T) {
+	expectedUsername := util.RandomString(20)
+	expectedPassword := util.RandomString(60)
+	expectedUser := database.RootUser{ID: 1, Username: expectedUsername, Role: database.RootUserRoleAdmin, IsActive: true}
+
+	mock := &mockStore{
+		createAdminV1Func: func(ctx context.Context, arg database.CreateAdminV1Params) (database.RootUser, error) {
+			require.Equal(t, expectedUsername, arg.PUsername)
+			require.Equal(t, expectedPassword, arg.PPassword)
+			return expectedUser, nil
+		},
+	}
+
+	repo := NewUserRepository(mock)
+	actualUser, err := repo.CreateAdminV1(context.Background(), expectedUsername, expectedPassword)
+
+	require.NoError(t, err)
+	require.Equal(t, expectedUser, actualUser)
+}
+
 func TestUserRepository_CreateUserV1_Success(t *testing.T) {
 	expectedUser := database.RootUser{
 		ID:       1,

@@ -7,6 +7,7 @@ import (
 )
 
 type UserRepository interface {
+	CreateAdminV1(ctx context.Context, pUsername string, pPassword string) (database.RootUser, error)
 	CreateUserV1(ctx context.Context, params database.CreateUserV1Params) (database.RootUser, error)
 	GetUserByUsernameV1(ctx context.Context, username string) (database.RootUser, error)
 	IsAdminCreationAllowedV1(ctx context.Context) (sql.NullBool, error)
@@ -18,6 +19,13 @@ type userRepository struct {
 
 func NewUserRepository(store database.Store) UserRepository {
 	return &userRepository{store: store}
+}
+
+func (r *userRepository) CreateAdminV1(ctx context.Context, pUsername string, pPassword string) (database.RootUser, error) {
+	return r.store.CreateAdminV1(ctx, database.CreateAdminV1Params{
+		PUsername: pUsername,
+		PPassword: pPassword,
+	})
 }
 
 func (r *userRepository) CreateUserV1(ctx context.Context, params database.CreateUserV1Params) (database.RootUser, error) {

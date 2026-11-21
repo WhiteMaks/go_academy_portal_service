@@ -9,9 +9,14 @@ import (
 )
 
 type mockStore struct {
+	createAdminV1Func            func(ctx context.Context, arg database.CreateAdminV1Params) (database.RootUser, error)
 	createUserV1Func             func(ctx context.Context, params database.CreateUserV1Params) (database.RootUser, error)
 	isAdminCreationAllowedV1Func func(ctx context.Context) (sql.NullBool, error)
 	getUserByUsernameV1Func      func(ctx context.Context, pUsername string) (database.RootUser, error)
+}
+
+func (m *mockStore) CreateAdminV1(ctx context.Context, arg database.CreateAdminV1Params) (database.RootUser, error) {
+	return m.createAdminV1Func(ctx, arg)
 }
 
 func (m *mockStore) CreateUserV1(ctx context.Context, params database.CreateUserV1Params) (database.RootUser, error) {

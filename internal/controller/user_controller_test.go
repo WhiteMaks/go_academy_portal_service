@@ -405,7 +405,7 @@ func TestUserController_CreateAdminV1_404(t *testing.T) {
 
 func TestUserController_CreateAdminV1_500(t *testing.T) {
 	expectedStatusCode := http.StatusInternalServerError
-	expectedResponseBody := service.PrepareErrorResponse(errors.New("service error"))
+	expectedResponseBody := model.ErrorResponse{Message: "internal server error"}
 
 	mock := &mockUserService{
 		createAdminV1Func: func(ctx context.Context, request model.PostUserV1Request) (model.PostUserV1Response, error) {
@@ -433,6 +433,32 @@ func TestUserController_CreateAdminV1_500(t *testing.T) {
 	tPrepareResponse(recorder.Body, &actualResponseBody)
 
 	require.Equal(t, expectedStatusCode, actualStatusCode)
+	require.Equal(t, expectedResponseBody, actualResponseBody)
+}
+
+func TestUserController_CreateAdminV1_409(t *testing.T) {
+	expectedStatusCode := http.StatusConflict
+	expectedResponseBody := model.ErrorResponse{Message: "username already exists"}
+
+	mock := &mockUserService{
+		createAdminV1Func: func(ctx context.Context, request model.PostUserV1Request) (model.PostUserV1Response, error) {
+			return model.PostUserV1Response{}, &pq.Error{Code: database.PgErrUniqueViolation, Message: "internal username conflict details"}
+		},
+	}
+
+	recorder := httptest.NewRecorder()
+	testContext, _ := gin.CreateTestContext(recorder)
+	testContext.Request = tPreparePostRequest(route.ApiUserAdminV1, model.PostUserV1Request{
+		Username: util.RandomString(16),
+		Password: util.RandomString(16),
+	})
+
+	controller := NewUserController(mock)
+	controller.CreateAdminV1(testContext)
+
+	var actualResponseBody model.ErrorResponse
+	tPrepareResponse(recorder.Body, &actualResponseBody)
+	require.Equal(t, expectedStatusCode, recorder.Code)
 	require.Equal(t, expectedResponseBody, actualResponseBody)
 }
 
