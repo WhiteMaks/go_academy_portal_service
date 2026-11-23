@@ -32,12 +32,15 @@ func NewMicroservice(config util.Microservice, store database.Store) *Microservi
 	}
 
 	userRepository := repository.NewUserRepository(ms.store)
+	athleteRepository := repository.NewAthleteRepository(ms.store)
 
 	microserviceService := service.NewMicroserviceService(userRepository)
 	userService := service.NewUserService(userRepository, ms.tokenMaker)
+	athleteService := service.NewAthleteService(athleteRepository)
 
 	microserviceController := controller.NewMicroserviceController(microserviceService)
 	userController := controller.NewUserController(userService)
+	athleteController := controller.NewAthleteController(athleteService, userService)
 
 	router := gin.Default()
 
@@ -56,10 +59,12 @@ func NewMicroservice(config util.Microservice, store database.Store) *Microservi
 	router.POST(route.ApiUserAdminV1, userController.CreateAdminV1)
 
 	authRoutes := router.Group("/").
-		Use(middleware.AuthMiddleware(ms.tokenMaker))
+		Use(middleware.AuthMiddleware(ms.tokenMaker, userService))
 
 	authRoutes.GET(route.ApiUserV1, userController.GetUserV1)
 	authRoutes.POST(route.ApiUserV1, userController.CreateUserV1)
+	authRoutes.GET(route.ApiAthleteV1, athleteController.GetAthletesV1)
+	authRoutes.POST(route.ApiAthleteV1, athleteController.CreateAthleteV1)
 
 	ms.Router = router
 

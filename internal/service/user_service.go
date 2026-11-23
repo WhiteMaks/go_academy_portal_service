@@ -16,6 +16,7 @@ import (
 var (
 	ErrAdminCreationIsNotAllowed = errors.New("admin creation is not allowed")
 	ErrInvalidCredentials        = errors.New("invalid credentials")
+	ErrAuthenticatedUserNotFound = errors.New("authenticated user not found")
 )
 
 type UserService interface {
@@ -41,6 +42,10 @@ func NewUserService(userRepository repository.UserRepository, tokenMaker util.To
 func (s *userService) GetUserV1(ctx context.Context, username string) (model.GetUserV1Response, error) {
 	userRecord, err := s.userRepository.GetUserByUsernameV1(ctx, username)
 	if err != nil {
+		var pqErr *pq.Error
+		if errors.As(err, &pqErr) && pqErr.Code == database.PgErrNoDataFound {
+			return model.GetUserV1Response{}, ErrAuthenticatedUserNotFound
+		}
 		return model.GetUserV1Response{}, err
 	}
 
