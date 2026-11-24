@@ -30,7 +30,6 @@ BEGIN
 	    parent_phone = p_parent_phone,
 	    updated_at = GREATEST(clock_timestamp(), athlete.updated_at + INTERVAL '1 microsecond')
 	WHERE athlete.id = p_id
-	  AND athlete.is_active = TRUE
 	RETURNING athlete.*;
 END;
 $$ LANGUAGE plpgsql VOLATILE;

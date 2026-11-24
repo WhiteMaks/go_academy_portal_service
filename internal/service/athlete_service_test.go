@@ -9,22 +9,31 @@ import (
 
 	"github.com/WhiteMaks/go_academy_portal_service/autogenerate/database"
 	"github.com/WhiteMaks/go_academy_portal_service/internal/model"
+	"github.com/lib/pq"
 	"github.com/stretchr/testify/require"
 )
 
 type mockAthleteRepository struct {
 	createFunc  func(context.Context, database.CreateAthleteV1Params) (database.RootAthlete, error)
-	getFunc     func(context.Context) ([]database.RootAthlete, error)
+	getFunc     func(context.Context, database.GetAthletesV1Params) ([]database.RootAthlete, error)
+	countFunc   func(context.Context, database.CountAthletesV1Params) (int64, error)
 	getByIDFunc func(context.Context, int64) (database.RootAthlete, error)
 	updateFunc  func(context.Context, database.UpdateAthleteV1Params) (database.RootAthlete, error)
+	archiveFunc func(context.Context, int64) (database.RootAthlete, error)
+	restoreFunc func(context.Context, int64) (database.RootAthlete, error)
+	coachFunc   func(context.Context, database.SetAthleteCoachV1Params) (database.RootAthlete, error)
 }
 
 func (m *mockAthleteRepository) CreateAthleteV1(ctx context.Context, params database.CreateAthleteV1Params) (database.RootAthlete, error) {
 	return m.createFunc(ctx, params)
 }
 
-func (m *mockAthleteRepository) GetAthletesV1(ctx context.Context) ([]database.RootAthlete, error) {
-	return m.getFunc(ctx)
+func (m *mockAthleteRepository) GetAthletesV1(ctx context.Context, params database.GetAthletesV1Params) ([]database.RootAthlete, error) {
+	return m.getFunc(ctx, params)
+}
+
+func (m *mockAthleteRepository) CountAthletesV1(ctx context.Context, params database.CountAthletesV1Params) (int64, error) {
+	return m.countFunc(ctx, params)
 }
 
 func (m *mockAthleteRepository) GetAthleteByIDV1(ctx context.Context, id int64) (database.RootAthlete, error) {
@@ -33,6 +42,18 @@ func (m *mockAthleteRepository) GetAthleteByIDV1(ctx context.Context, id int64) 
 
 func (m *mockAthleteRepository) UpdateAthleteV1(ctx context.Context, params database.UpdateAthleteV1Params) (database.RootAthlete, error) {
 	return m.updateFunc(ctx, params)
+}
+
+func (m *mockAthleteRepository) ArchiveAthleteV1(ctx context.Context, id int64) (database.RootAthlete, error) {
+	return m.archiveFunc(ctx, id)
+}
+
+func (m *mockAthleteRepository) RestoreAthleteV1(ctx context.Context, id int64) (database.RootAthlete, error) {
+	return m.restoreFunc(ctx, id)
+}
+
+func (m *mockAthleteRepository) SetAthleteCoachV1(ctx context.Context, params database.SetAthleteCoachV1Params) (database.RootAthlete, error) {
+	return m.coachFunc(ctx, params)
 }
 
 func TestAthleteService_CreateAthleteV1_NormalizesAndMaps(t *testing.T) {
@@ -123,23 +144,179 @@ func TestAthleteService_CreateAthleteV1_RepositoryError(t *testing.T) {
 
 func TestAthleteService_GetAthletesV1ReturnsEmptyArrayAndNullableFields(t *testing.T) {
 	updatedAt := time.Date(2025, 1, 2, 3, 4, 5, 123456000, time.UTC)
-	service := NewAthleteService(&mockAthleteRepository{getFunc: func(context.Context) ([]database.RootAthlete, error) {
+	service := NewAthleteService(&mockAthleteRepository{getFunc: func(context.Context, database.GetAthletesV1Params) ([]database.RootAthlete, error) {
 		return []database.RootAthlete{{ID: 1, FirstName: "A", SecondName: "B", BirthDate: time.Date(2000, 1, 2, 0, 0, 0, 0, time.UTC), UpdatedAt: updatedAt}}, nil
+	}, countFunc: func(context.Context, database.CountAthletesV1Params) (int64, error) {
+		return 1, nil
 	}})
-	response, err := service.GetAthletesV1(context.Background())
+	response, err := service.GetAthletesV1(context.Background(), model.GetAthletesV1Query{IsActive: true, Limit: 50})
 	require.NoError(t, err)
 	require.Len(t, response.Athletes, 1)
 	require.Nil(t, response.Athletes[0].Phone)
 	require.Equal(t, utcDate(2000, time.January, 2), response.Athletes[0].BirthDate)
 	require.Equal(t, updatedAt, response.Athletes[0].UpdatedAt)
 
-	emptyService := NewAthleteService(&mockAthleteRepository{getFunc: func(context.Context) ([]database.RootAthlete, error) {
+	emptyService := NewAthleteService(&mockAthleteRepository{getFunc: func(context.Context, database.GetAthletesV1Params) ([]database.RootAthlete, error) {
 		return nil, nil
+	}, countFunc: func(context.Context, database.CountAthletesV1Params) (int64, error) {
+		return 0, nil
 	}})
-	emptyResponse, err := emptyService.GetAthletesV1(context.Background())
+	emptyResponse, err := emptyService.GetAthletesV1(context.Background(), model.GetAthletesV1Query{IsActive: true, Limit: 50})
 	require.NoError(t, err)
 	require.NotNil(t, emptyResponse.Athletes)
 	require.Empty(t, emptyResponse.Athletes)
+}
+
+func TestNormalizeAthleteSearchQuery(t *testing.T) {
+	cases := []struct {
+		name   string
+		input  string
+		want   string
+		isDate bool
+	}{
+		{name: "empty", input: " \t ", want: ""},
+		{name: "fio normalized", input: "  Ёлки\tИВАНОВ  ", want: "елки иванов"},
+		{name: "date with dots and spaces", input: " 23. 04 ", want: "2304", isDate: true},
+		{name: "date without separators", input: "2304", want: "2304", isDate: true},
+		{name: "mixed remains fio", input: "Иванова 23.04", want: "иванова 23.04"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, isDate := NormalizeAthleteSearchQuery(tc.input)
+			require.Equal(t, tc.want, got)
+			require.Equal(t, tc.isDate, isDate)
+		})
+	}
+}
+
+func TestAthleteService_GetAthletesV1MapsFiltersPaginationAndCount(t *testing.T) {
+	isCoach := false
+	query := model.GetAthletesV1Query{IsActive: false, SearchQuery: "иванова анна", IsCoach: &isCoach, Limit: 12, Offset: 24}
+	coachFilter := sql.NullBool{Bool: false, Valid: true}
+	wantList := database.GetAthletesV1Params{IsActive: false, SearchQuery: "иванова анна", IsCoach: coachFilter, LimitCount: 12, OffsetCount: 24}
+	wantCount := database.CountAthletesV1Params{IsActive: false, SearchQuery: "иванова анна", IsCoach: coachFilter}
+	var gotList database.GetAthletesV1Params
+	var gotCount database.CountAthletesV1Params
+	repository := &mockAthleteRepository{
+		getFunc: func(_ context.Context, params database.GetAthletesV1Params) ([]database.RootAthlete, error) {
+			gotList = params
+			return nil, nil
+		},
+		countFunc: func(_ context.Context, params database.CountAthletesV1Params) (int64, error) {
+			gotCount = params
+			return 37, nil
+		},
+	}
+	response, err := NewAthleteService(repository).GetAthletesV1(context.Background(), query)
+	require.NoError(t, err)
+	require.Equal(t, wantList, gotList)
+	require.Equal(t, wantCount, gotCount)
+	require.Equal(t, int64(37), response.Total)
+	require.Equal(t, int32(12), response.Limit)
+	require.Equal(t, int32(24), response.Offset)
+}
+
+func TestAthleteService_SetAthleteCoachReturnsDesiredState(t *testing.T) {
+	var got database.SetAthleteCoachV1Params
+	service := NewAthleteService(&mockAthleteRepository{coachFunc: func(_ context.Context, params database.SetAthleteCoachV1Params) (database.RootAthlete, error) {
+		got = params
+		return database.RootAthlete{ID: params.ID, IsActive: false, IsCoach: params.IsCoach}, nil
+	}})
+	response, err := service.SetAthleteCoachV1(context.Background(), 9, true)
+	require.NoError(t, err)
+	require.Equal(t, database.SetAthleteCoachV1Params{ID: 9, IsCoach: true}, got)
+	require.Equal(t, "9", response.ID)
+	require.False(t, response.IsActive)
+	require.True(t, response.IsCoach)
+}
+
+func TestAthleteService_SetAthleteCoachMapsMissingAthlete(t *testing.T) {
+	for _, dbErr := range []error{
+		sql.ErrNoRows,
+		&pq.Error{Code: "P0002"},
+	} {
+		service := NewAthleteService(&mockAthleteRepository{coachFunc: func(context.Context, database.SetAthleteCoachV1Params) (database.RootAthlete, error) {
+			return database.RootAthlete{}, dbErr
+		}})
+		_, err := service.SetAthleteCoachV1(context.Background(), 404, true)
+		require.ErrorIs(t, err, ErrAthleteNotFound)
+	}
+}
+
+func TestAthleteService_GetAthletesV1MapsDateQuery(t *testing.T) {
+	var gotList database.GetAthletesV1Params
+	var gotCount database.CountAthletesV1Params
+	repository := &mockAthleteRepository{
+		getFunc: func(_ context.Context, params database.GetAthletesV1Params) ([]database.RootAthlete, error) {
+			gotList = params
+			return nil, nil
+		},
+		countFunc: func(_ context.Context, params database.CountAthletesV1Params) (int64, error) {
+			gotCount = params
+			return 0, nil
+		},
+	}
+	_, err := NewAthleteService(repository).GetAthletesV1(context.Background(), model.GetAthletesV1Query{
+		IsActive: true, SearchQuery: "2304", IsBirthDateQuery: true, Limit: 50,
+	})
+	require.NoError(t, err)
+	require.True(t, gotList.IsBirthDateQuery)
+	require.True(t, gotCount.IsBirthDateQuery)
+}
+
+func TestAthleteService_ArchiveRestoreClassifiesDatabaseStates(t *testing.T) {
+	cases := []struct {
+		name      string
+		operation func(*athleteService) error
+		dbCode    pq.ErrorCode
+		wantErr   error
+	}{
+		{name: "archive already archived", operation: func(s *athleteService) error { _, err := s.ArchiveAthleteV1(context.Background(), 1); return err }, dbCode: "P4091", wantErr: ErrAthleteAlreadyArchived},
+		{name: "restore already active", operation: func(s *athleteService) error { _, err := s.RestoreAthleteV1(context.Background(), 1); return err }, dbCode: "P4092", wantErr: ErrAthleteAlreadyActive},
+		{name: "unknown archive id", operation: func(s *athleteService) error { _, err := s.ArchiveAthleteV1(context.Background(), 1); return err }, dbCode: "P0002", wantErr: ErrAthleteNotFound},
+		{name: "unknown restore id", operation: func(s *athleteService) error { _, err := s.RestoreAthleteV1(context.Background(), 1); return err }, dbCode: "P0002", wantErr: ErrAthleteNotFound},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			dbErr := &pq.Error{Code: tc.dbCode}
+			repository := &mockAthleteRepository{
+				archiveFunc: func(context.Context, int64) (database.RootAthlete, error) { return database.RootAthlete{}, dbErr },
+				restoreFunc: func(context.Context, int64) (database.RootAthlete, error) { return database.RootAthlete{}, dbErr },
+			}
+			require.ErrorIs(t, tc.operation(&athleteService{repository: repository}), tc.wantErr)
+		})
+	}
+}
+
+func TestAthleteService_ArchiveRestoreMapSuccessfulState(t *testing.T) {
+	archived := database.RootAthlete{ID: 7, IsActive: false}
+	active := database.RootAthlete{ID: 7, IsActive: true}
+	repository := &mockAthleteRepository{
+		archiveFunc: func(_ context.Context, id int64) (database.RootAthlete, error) {
+			require.Equal(t, int64(7), id)
+			return archived, nil
+		},
+		restoreFunc: func(_ context.Context, id int64) (database.RootAthlete, error) {
+			require.Equal(t, int64(7), id)
+			return active, nil
+		},
+	}
+	service := NewAthleteService(repository)
+	archivedResponse, err := service.ArchiveAthleteV1(context.Background(), 7)
+	require.NoError(t, err)
+	require.False(t, archivedResponse.IsActive)
+	activeResponse, err := service.RestoreAthleteV1(context.Background(), 7)
+	require.NoError(t, err)
+	require.True(t, activeResponse.IsActive)
+}
+
+func TestAthleteService_UpdateAthleteV1PreservesArchivedState(t *testing.T) {
+	service := NewAthleteService(&mockAthleteRepository{updateFunc: func(_ context.Context, params database.UpdateAthleteV1Params) (database.RootAthlete, error) {
+		return database.RootAthlete{ID: params.ID, FirstName: params.FirstName, SecondName: params.SecondName, BirthDate: params.BirthDate, IsActive: false}, nil
+	}})
+	response, err := service.UpdateAthleteV1(context.Background(), 7, validUpdateRequest())
+	require.NoError(t, err)
+	require.False(t, response.IsActive)
 }
 
 func TestAthleteService_UpdateAthleteV1_MapsResponse(t *testing.T) {

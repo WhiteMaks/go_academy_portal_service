@@ -4,7 +4,6 @@ BEGIN
 	RETURN QUERY
 	SELECT *
 	FROM root.athletes
-	WHERE id = p_id
-	  AND is_active = TRUE;
+	WHERE id = p_id;
 END;
 $$ LANGUAGE plpgsql STABLE;

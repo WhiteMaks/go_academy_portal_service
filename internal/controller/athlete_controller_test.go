@@ -21,17 +21,20 @@ import (
 
 type mockAthleteService struct {
 	createFunc  func(context.Context, model.PostAthleteV1Request) (model.AthleteV1Response, error)
-	getFunc     func(context.Context) (model.GetAthletesV1Response, error)
+	getFunc     func(context.Context, model.GetAthletesV1Query) (model.GetAthletesV1Response, error)
 	getByIDFunc func(context.Context, int64) (model.AthleteV1Response, error)
 	updateFunc  func(context.Context, int64, model.PutAthleteV1Request) (model.AthleteV1Response, error)
+	archiveFunc func(context.Context, int64) (model.AthleteV1Response, error)
+	restoreFunc func(context.Context, int64) (model.AthleteV1Response, error)
+	coachFunc   func(context.Context, int64, bool) (model.AthleteV1Response, error)
 }
 
 func (m *mockAthleteService) CreateAthleteV1(ctx context.Context, request model.PostAthleteV1Request) (model.AthleteV1Response, error) {
 	return m.createFunc(ctx, request)
 }
 
-func (m *mockAthleteService) GetAthletesV1(ctx context.Context) (model.GetAthletesV1Response, error) {
-	return m.getFunc(ctx)
+func (m *mockAthleteService) GetAthletesV1(ctx context.Context, query model.GetAthletesV1Query) (model.GetAthletesV1Response, error) {
+	return m.getFunc(ctx, query)
 }
 
 func (m *mockAthleteService) GetAthleteByIDV1(ctx context.Context, id int64) (model.AthleteV1Response, error) {
@@ -42,9 +45,21 @@ func (m *mockAthleteService) UpdateAthleteV1(ctx context.Context, id int64, requ
 	return m.updateFunc(ctx, id, request)
 }
 
+func (m *mockAthleteService) ArchiveAthleteV1(ctx context.Context, id int64) (model.AthleteV1Response, error) {
+	return m.archiveFunc(ctx, id)
+}
+
+func (m *mockAthleteService) RestoreAthleteV1(ctx context.Context, id int64) (model.AthleteV1Response, error) {
+	return m.restoreFunc(ctx, id)
+}
+
+func (m *mockAthleteService) SetAthleteCoachV1(ctx context.Context, id int64, isCoach bool) (model.AthleteV1Response, error) {
+	return m.coachFunc(ctx, id, isCoach)
+}
+
 func TestAthleteController_GetAthletesV1_RequiresAdmin(t *testing.T) {
 	called := false
-	athleteService := &mockAthleteService{getFunc: func(context.Context) (model.GetAthletesV1Response, error) {
+	athleteService := &mockAthleteService{getFunc: func(context.Context, model.GetAthletesV1Query) (model.GetAthletesV1Response, error) {
 		called = true
 		return model.GetAthletesV1Response{}, nil
 	}}
@@ -72,6 +87,7 @@ func TestAthleteController_CreateAthleteV1_BadRequest(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	ctx, _ := gin.CreateTestContext(recorder)
 	ctx.Set(middleware.AuthorizationPayload, util.NewTokenPayload("admin", "admin", time.Minute))
+	ctx.Request = httptest.NewRequest(http.MethodGet, "/api/athlete/v1", nil)
 	ctx.Request = httptest.NewRequest(http.MethodPost, "/api/athlete/v1", strings.NewReader(`{"lastName":`))
 
 	NewAthleteController(athleteService, userService).CreateAthleteV1(ctx)
@@ -157,17 +173,86 @@ func TestAthleteController_CreateAthleteV1_AcceptsValidOptionalPhonesAndEmptyVal
 }
 
 func TestAthleteController_GetAthletesV1_HidesInternalError(t *testing.T) {
-	athleteService := &mockAthleteService{getFunc: func(context.Context) (model.GetAthletesV1Response, error) {
+	athleteService := &mockAthleteService{getFunc: func(context.Context, model.GetAthletesV1Query) (model.GetAthletesV1Response, error) {
 		return model.GetAthletesV1Response{}, errors.New("database password leaked")
 	}}
 	userService := &mockUserService{hasAccessFunc: func(context.Context, *util.Payload, []database.RootUserRole) bool { return true }}
 	recorder := httptest.NewRecorder()
 	ctx, _ := gin.CreateTestContext(recorder)
 	ctx.Set(middleware.AuthorizationPayload, util.NewTokenPayload("admin", "admin", time.Minute))
+	ctx.Request = httptest.NewRequest(http.MethodGet, "/api/athlete/v1", nil)
 
 	NewAthleteController(athleteService, userService).GetAthletesV1(ctx)
 	require.Equal(t, http.StatusInternalServerError, recorder.Code)
 	require.JSONEq(t, `{"message":"internal server error"}`, recorder.Body.String())
+}
+
+func TestParseAthleteListQueryDefaultsAndBounds(t *testing.T) {
+	cases := []struct {
+		name  string
+		query string
+		want  model.GetAthletesV1Query
+	}{
+		{name: "defaults", want: model.GetAthletesV1Query{IsActive: true, Limit: 50}},
+		{name: "archived and bounds", query: "status=archived&limit=100&offset=2147483647", want: model.GetAthletesV1Query{IsActive: false, Limit: 100, Offset: 2147483647}},
+		{name: "minimum limit", query: "limit=1", want: model.GetAthletesV1Query{IsActive: true, Limit: 1}},
+		{name: "coach false", query: "isCoach=false", want: model.GetAthletesV1Query{IsActive: true, IsCoach: boolPointer(false), Limit: 50}},
+		{name: "coach true with other filters", query: "status=archived&q=anna&isCoach=true", want: model.GetAthletesV1Query{IsActive: false, SearchQuery: "anna", IsCoach: boolPointer(true), Limit: 50}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := parseAthleteListQuery(tc.query)
+			require.NoError(t, err)
+			require.Equal(t, tc.want, got)
+		})
+	}
+}
+
+func TestParseAthleteListQueryRejectsInvalidValues(t *testing.T) {
+	for _, query := range []string{
+		"status=deleted", "status=active&status=archived", "limit=0", "limit=101", "limit=1.5",
+		"offset=-1", "offset=2147483648", "unknown=value", "q=%FF", "q=" + strings.Repeat("a", 201),
+		"isCoach=1", "isCoach=TRUE", "isCoach=", "isCoach=true&isCoach=false",
+	} {
+		t.Run(query, func(t *testing.T) {
+			_, err := parseAthleteListQuery(query)
+			require.Error(t, err)
+		})
+	}
+}
+
+func TestAthleteController_GetAthletesV1ParsesQueryAndReturnsEnvelope(t *testing.T) {
+	var gotQuery model.GetAthletesV1Query
+	athleteService := &mockAthleteService{getFunc: func(_ context.Context, query model.GetAthletesV1Query) (model.GetAthletesV1Response, error) {
+		gotQuery = query
+		return model.GetAthletesV1Response{Athletes: []model.AthleteV1Response{}, Total: 42, Limit: query.Limit, Offset: query.Offset}, nil
+	}}
+	userService := &mockUserService{hasAccessFunc: func(context.Context, *util.Payload, []database.RootUserRole) bool { return true }}
+	recorder, ctx := athleteRequestContext(http.MethodGet, "", "")
+	ctx.Request.URL.RawQuery = "status=archived&q=23.04&limit=25&offset=50"
+	NewAthleteController(athleteService, userService).GetAthletesV1(ctx)
+	require.Equal(t, http.StatusOK, recorder.Code)
+	require.Equal(t, model.GetAthletesV1Query{IsActive: false, SearchQuery: "2304", IsBirthDateQuery: true, Limit: 25, Offset: 50}, gotQuery)
+	require.JSONEq(t, `{"athletes":[],"total":42,"limit":25,"offset":50}`, recorder.Body.String())
+}
+
+func TestAthleteController_GetAthletesV1RejectsInvalidQuery(t *testing.T) {
+	for _, query := range []string{"status=unknown", "limit=0", "offset=-1", "extra=1", "status=active&status=archived"} {
+		t.Run(query, func(t *testing.T) {
+			called := false
+			athleteService := &mockAthleteService{getFunc: func(context.Context, model.GetAthletesV1Query) (model.GetAthletesV1Response, error) {
+				called = true
+				return model.GetAthletesV1Response{}, nil
+			}}
+			userService := &mockUserService{hasAccessFunc: func(context.Context, *util.Payload, []database.RootUserRole) bool { return true }}
+			recorder, ctx := athleteRequestContext(http.MethodGet, "", "")
+			ctx.Request.URL.RawQuery = query
+			NewAthleteController(athleteService, userService).GetAthletesV1(ctx)
+			require.Equal(t, http.StatusBadRequest, recorder.Code)
+			require.JSONEq(t, `{"message":"invalid request query"}`, recorder.Body.String())
+			require.False(t, called)
+		})
+	}
 }
 
 func TestAthleteController_GetAthleteByIDV1_ValidatesIDAndMapsNotFound(t *testing.T) {
@@ -219,6 +304,69 @@ func TestAthleteController_UpdateAthleteV1_RejectsUnknownFieldsAndUpdates(t *tes
 	recorder, ctx := athleteRequestContext(http.MethodPut, validBody, "7")
 	NewAthleteController(athleteService, userService).UpdateAthleteV1(ctx)
 	require.Equal(t, http.StatusOK, recorder.Code)
+}
+
+func TestAthleteController_ArchiveRestoreResponsesAndErrors(t *testing.T) {
+	userService := &mockUserService{hasAccessFunc: func(context.Context, *util.Payload, []database.RootUserRole) bool { return true }}
+	for _, tc := range []struct {
+		name       string
+		method     func(service.AthleteService, *gin.Context)
+		result     model.AthleteV1Response
+		serviceErr error
+		status     int
+		message    string
+	}{
+		{name: "archive success", method: func(s service.AthleteService, c *gin.Context) {
+			NewAthleteController(s, userService).ArchiveAthleteV1(c)
+		}, result: model.AthleteV1Response{ID: "7", IsActive: false}, status: http.StatusOK},
+		{name: "restore success", method: func(s service.AthleteService, c *gin.Context) {
+			NewAthleteController(s, userService).RestoreAthleteV1(c)
+		}, result: model.AthleteV1Response{ID: "7", IsActive: true}, status: http.StatusOK},
+		{name: "archive conflict", method: func(s service.AthleteService, c *gin.Context) {
+			NewAthleteController(s, userService).ArchiveAthleteV1(c)
+		}, serviceErr: service.ErrAthleteAlreadyArchived, status: http.StatusConflict, message: "athlete already archived"},
+		{name: "restore conflict", method: func(s service.AthleteService, c *gin.Context) {
+			NewAthleteController(s, userService).RestoreAthleteV1(c)
+		}, serviceErr: service.ErrAthleteAlreadyActive, status: http.StatusConflict, message: "athlete is already active"},
+		{name: "unknown id", method: func(s service.AthleteService, c *gin.Context) {
+			NewAthleteController(s, userService).ArchiveAthleteV1(c)
+		}, serviceErr: service.ErrAthleteNotFound, status: http.StatusNotFound, message: "athlete not found"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			athleteService := &mockAthleteService{
+				archiveFunc: func(_ context.Context, id int64) (model.AthleteV1Response, error) {
+					require.Equal(t, int64(7), id)
+					return tc.result, tc.serviceErr
+				},
+				restoreFunc: func(_ context.Context, id int64) (model.AthleteV1Response, error) {
+					require.Equal(t, int64(7), id)
+					return tc.result, tc.serviceErr
+				},
+			}
+			recorder, ctx := athleteRequestContext(http.MethodPost, "", "7")
+			tc.method(athleteService, ctx)
+			require.Equal(t, tc.status, recorder.Code)
+			if tc.message != "" {
+				require.JSONEq(t, `{"message":"`+tc.message+`"}`, recorder.Body.String())
+			}
+		})
+	}
+}
+
+func TestAthleteController_ArchiveRejectsInvalidIDAndBody(t *testing.T) {
+	userService := &mockUserService{hasAccessFunc: func(context.Context, *util.Payload, []database.RootUserRole) bool { return true }}
+	for _, tc := range []struct{ id, body, message string }{{id: "01", message: "invalid athlete id"}, {id: "7", body: "{}", message: "invalid request query"}} {
+		called := false
+		athleteService := &mockAthleteService{archiveFunc: func(context.Context, int64) (model.AthleteV1Response, error) {
+			called = true
+			return model.AthleteV1Response{}, nil
+		}}
+		recorder, ctx := athleteRequestContext(http.MethodPost, tc.body, tc.id)
+		NewAthleteController(athleteService, userService).ArchiveAthleteV1(ctx)
+		require.Equal(t, http.StatusBadRequest, recorder.Code)
+		require.JSONEq(t, `{"message":"`+tc.message+`"}`, recorder.Body.String())
+		require.False(t, called)
+	}
 }
 
 func TestAthleteController_UpdateAthleteV1_ValidatesContractBoundaries(t *testing.T) {
@@ -291,6 +439,42 @@ func athleteRequestContext(method, body, id string) (*httptest.ResponseRecorder,
 	ctx.Set(middleware.AuthorizationPayload, util.NewTokenPayload("admin", "admin", time.Minute))
 	ctx.Request = httptest.NewRequest(method, "/api/athlete/"+id+"/v1", strings.NewReader(body))
 	return recorder, ctx
+}
+
+func boolPointer(value bool) *bool { return &value }
+
+func TestAthleteController_SetAthleteCoachV1StrictBodyAndDesiredState(t *testing.T) {
+	for _, tc := range []struct {
+		body   string
+		status int
+		want   bool
+	}{
+		{body: `{"isCoach":true}`, status: http.StatusOK, want: true},
+		{body: `{"isCoach":false}`, status: http.StatusOK, want: false},
+		{body: `{}`, status: http.StatusBadRequest},
+		{body: `{"isCoach":null}`, status: http.StatusBadRequest},
+		{body: `{"isCoach":"true"}`, status: http.StatusBadRequest},
+		{body: `{"isCoach":true,"extra":1}`, status: http.StatusBadRequest},
+		{body: `{"isCoach":true} {}`, status: http.StatusBadRequest},
+	} {
+		t.Run(tc.body, func(t *testing.T) {
+			called := false
+			athleteService := &mockAthleteService{coachFunc: func(_ context.Context, id int64, isCoach bool) (model.AthleteV1Response, error) {
+				called = true
+				require.EqualValues(t, 23, id)
+				require.Equal(t, tc.want, isCoach)
+				return model.AthleteV1Response{ID: "23", IsCoach: isCoach}, nil
+			}}
+			userService := &mockUserService{hasAccessFunc: func(_ context.Context, _ *util.Payload, roles []database.RootUserRole) bool {
+				require.Equal(t, []database.RootUserRole{database.RootUserRoleAdmin}, roles)
+				return true
+			}}
+			recorder, ctx := athleteRequestContext(http.MethodPut, tc.body, "23")
+			NewAthleteController(athleteService, userService).SetAthleteCoachV1(ctx)
+			require.Equal(t, tc.status, recorder.Code)
+			require.Equal(t, tc.status == http.StatusOK, called)
+		})
+	}
 }
 
 var _ service.AthleteService = (*mockAthleteService)(nil)

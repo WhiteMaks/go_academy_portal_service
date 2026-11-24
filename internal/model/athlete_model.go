@@ -40,9 +40,22 @@ type AthleteV1Response struct {
 	ParentMiddleName *string   `json:"parentMiddleName"`
 	ParentPhone      *string   `json:"parentPhone"`
 	IsActive         bool      `json:"isActive"`
+	IsCoach          bool      `json:"isCoach"`
 	UpdatedAt        time.Time `json:"updatedAt"`
 }
 
 type GetAthletesV1Response struct {
 	Athletes []AthleteV1Response `json:"athletes"`
+	Total    int64               `json:"total"`
+	Limit    int32               `json:"limit"`
+	Offset   int32               `json:"offset"`
+}
+
+type GetAthletesV1Query struct {
+	IsActive         bool
+	IsCoach          *bool
+	SearchQuery      string
+	IsBirthDateQuery bool
+	Limit            int32
+	Offset           int32
 }

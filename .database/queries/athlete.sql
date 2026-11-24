@@ -15,7 +15,26 @@ FROM root.create_athlete_v1(
 
 -- name: GetAthletesV1 :many
 SELECT *
-FROM root.get_athletes_v1();
+FROM root.get_athletes_v1(
+	sqlc.arg('is_active'),
+	sqlc.arg('search_query'),
+	sqlc.arg('is_birth_date_query'),
+	sqlc.arg('limit_count'),
+	sqlc.arg('offset_count'),
+	sqlc.narg('is_coach')
+);
+
+-- name: CountAthletesV1 :one
+SELECT root.count_athletes_v1(
+	sqlc.arg('is_active'),
+	sqlc.arg('search_query'),
+	sqlc.arg('is_birth_date_query'),
+	sqlc.narg('is_coach')
+) AS count;
+
+-- name: SetAthleteCoachV1 :one
+SELECT *
+FROM root.set_athlete_coach_v1(sqlc.arg('id'), sqlc.arg('is_coach'));
 
 -- name: GetAthleteByIDV1 :one
 SELECT *
@@ -35,3 +54,11 @@ FROM root.update_athlete_v1(
 	sqlc.narg('parent_middle_name'),
 	sqlc.narg('parent_phone')
 );
+
+-- name: ArchiveAthleteV1 :one
+SELECT *
+FROM root.archive_athlete_v1(sqlc.arg('id'));
+
+-- name: RestoreAthleteV1 :one
+SELECT *
+FROM root.restore_athlete_v1(sqlc.arg('id'));
