@@ -14,6 +14,8 @@ type mockStore struct {
 	createUserV1Func             func(ctx context.Context, params database.CreateUserV1Params) (database.RootUser, error)
 	isAdminCreationAllowedV1Func func(ctx context.Context) (sql.NullBool, error)
 	getAthletesV1Func            func(ctx context.Context) ([]database.RootAthlete, error)
+	getAthleteByIDV1Func         func(ctx context.Context, id int64) (database.RootAthlete, error)
+	updateAthleteV1Func          func(ctx context.Context, arg database.UpdateAthleteV1Params) (database.RootAthlete, error)
 	getUserByUsernameV1Func      func(ctx context.Context, pUsername string) (database.RootUser, error)
 }
 
@@ -27,6 +29,14 @@ func (m *mockStore) CreateAthleteV1(ctx context.Context, arg database.CreateAthl
 
 func (m *mockStore) GetAthletesV1(ctx context.Context) ([]database.RootAthlete, error) {
 	return m.getAthletesV1Func(ctx)
+}
+
+func (m *mockStore) GetAthleteByIDV1(ctx context.Context, id int64) (database.RootAthlete, error) {
+	return m.getAthleteByIDV1Func(ctx, id)
+}
+
+func (m *mockStore) UpdateAthleteV1(ctx context.Context, arg database.UpdateAthleteV1Params) (database.RootAthlete, error) {
+	return m.updateAthleteV1Func(ctx, arg)
 }
 
 func (m *mockStore) CreateUserV1(ctx context.Context, params database.CreateUserV1Params) (database.RootUser, error) {

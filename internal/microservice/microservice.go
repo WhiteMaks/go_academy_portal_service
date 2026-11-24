@@ -65,6 +65,8 @@ func NewMicroservice(config util.Microservice, store database.Store) *Microservi
 	authRoutes.POST(route.ApiUserV1, userController.CreateUserV1)
 	authRoutes.GET(route.ApiAthleteV1, athleteController.GetAthletesV1)
 	authRoutes.POST(route.ApiAthleteV1, athleteController.CreateAthleteV1)
+	authRoutes.GET(route.ApiAthleteByIDV1, athleteController.GetAthleteByIDV1)
+	authRoutes.PUT(route.ApiAthleteByIDV1, athleteController.UpdateAthleteV1)
 
 	ms.Router = router
 

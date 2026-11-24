@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"testing"
 	"time"
@@ -12,8 +13,10 @@ import (
 )
 
 type mockAthleteRepository struct {
-	createFunc func(context.Context, database.CreateAthleteV1Params) (database.RootAthlete, error)
-	getFunc    func(context.Context) ([]database.RootAthlete, error)
+	createFunc  func(context.Context, database.CreateAthleteV1Params) (database.RootAthlete, error)
+	getFunc     func(context.Context) ([]database.RootAthlete, error)
+	getByIDFunc func(context.Context, int64) (database.RootAthlete, error)
+	updateFunc  func(context.Context, database.UpdateAthleteV1Params) (database.RootAthlete, error)
 }
 
 func (m *mockAthleteRepository) CreateAthleteV1(ctx context.Context, params database.CreateAthleteV1Params) (database.RootAthlete, error) {
@@ -24,12 +27,21 @@ func (m *mockAthleteRepository) GetAthletesV1(ctx context.Context) ([]database.R
 	return m.getFunc(ctx)
 }
 
+func (m *mockAthleteRepository) GetAthleteByIDV1(ctx context.Context, id int64) (database.RootAthlete, error) {
+	return m.getByIDFunc(ctx, id)
+}
+
+func (m *mockAthleteRepository) UpdateAthleteV1(ctx context.Context, params database.UpdateAthleteV1Params) (database.RootAthlete, error) {
+	return m.updateFunc(ctx, params)
+}
+
 func TestAthleteService_CreateAthleteV1_NormalizesAndMaps(t *testing.T) {
 	blank := "   "
 	phone := "+79991234567"
 	parentPhone := "+441234567890"
 	parentFirstName := "Анна"
 	parentSecondName := "Иванова"
+	updatedAt := time.Date(2025, 1, 2, 3, 4, 5, 123456000, time.UTC)
 	var gotParams database.CreateAthleteV1Params
 	repository := &mockAthleteRepository{
 		createFunc: func(_ context.Context, params database.CreateAthleteV1Params) (database.RootAthlete, error) {
@@ -39,7 +51,7 @@ func TestAthleteService_CreateAthleteV1_NormalizesAndMaps(t *testing.T) {
 				MiddleName: params.MiddleName, BirthDate: params.BirthDate, PhotoUrl: params.PhotoUrl,
 				Phone: params.Phone, ParentSecondName: params.ParentSecondName,
 				ParentFirstName: params.ParentFirstName, ParentMiddleName: params.ParentMiddleName,
-				ParentPhone: params.ParentPhone, IsActive: true,
+				ParentPhone: params.ParentPhone, IsActive: true, UpdatedAt: updatedAt,
 			}, nil
 		},
 	}
@@ -65,6 +77,7 @@ func TestAthleteService_CreateAthleteV1_NormalizesAndMaps(t *testing.T) {
 	require.Equal(t, "Иванова", *response.ParentSecondName)
 	require.Equal(t, "+441234567890", *response.ParentPhone)
 	require.True(t, response.IsActive)
+	require.Equal(t, updatedAt, response.UpdatedAt)
 }
 
 func TestAthleteService_CreateAthleteV1_NormalizesEmptyOptionalPhones(t *testing.T) {
@@ -109,14 +122,16 @@ func TestAthleteService_CreateAthleteV1_RepositoryError(t *testing.T) {
 }
 
 func TestAthleteService_GetAthletesV1ReturnsEmptyArrayAndNullableFields(t *testing.T) {
+	updatedAt := time.Date(2025, 1, 2, 3, 4, 5, 123456000, time.UTC)
 	service := NewAthleteService(&mockAthleteRepository{getFunc: func(context.Context) ([]database.RootAthlete, error) {
-		return []database.RootAthlete{{ID: 1, FirstName: "A", SecondName: "B", BirthDate: time.Date(2000, 1, 2, 0, 0, 0, 0, time.UTC)}}, nil
+		return []database.RootAthlete{{ID: 1, FirstName: "A", SecondName: "B", BirthDate: time.Date(2000, 1, 2, 0, 0, 0, 0, time.UTC), UpdatedAt: updatedAt}}, nil
 	}})
 	response, err := service.GetAthletesV1(context.Background())
 	require.NoError(t, err)
 	require.Len(t, response.Athletes, 1)
 	require.Nil(t, response.Athletes[0].Phone)
 	require.Equal(t, utcDate(2000, time.January, 2), response.Athletes[0].BirthDate)
+	require.Equal(t, updatedAt, response.Athletes[0].UpdatedAt)
 
 	emptyService := NewAthleteService(&mockAthleteRepository{getFunc: func(context.Context) ([]database.RootAthlete, error) {
 		return nil, nil
@@ -125,6 +140,39 @@ func TestAthleteService_GetAthletesV1ReturnsEmptyArrayAndNullableFields(t *testi
 	require.NoError(t, err)
 	require.NotNil(t, emptyResponse.Athletes)
 	require.Empty(t, emptyResponse.Athletes)
+}
+
+func TestAthleteService_UpdateAthleteV1_MapsResponse(t *testing.T) {
+	old := time.Date(2025, 1, 2, 3, 4, 5, 123456000, time.UTC)
+	advanced := old.Add(time.Microsecond)
+	request := validUpdateRequest()
+	photo := sql.NullString{String: "https://example.com/photo.jpg", Valid: true}
+	gotParams := database.UpdateAthleteV1Params{}
+	service := NewAthleteService(&mockAthleteRepository{updateFunc: func(_ context.Context, params database.UpdateAthleteV1Params) (database.RootAthlete, error) {
+		gotParams = params
+		return database.RootAthlete{ID: 7, FirstName: params.FirstName, SecondName: params.SecondName, BirthDate: params.BirthDate,
+			PhotoUrl: photo, IsActive: true, UpdatedAt: advanced}, nil
+	}})
+	response, err := service.UpdateAthleteV1(context.Background(), 7, request)
+	require.NoError(t, err)
+	require.Equal(t, "Иван", gotParams.FirstName)
+	require.Equal(t, "Иванов", gotParams.SecondName)
+	require.Equal(t, advanced, response.UpdatedAt)
+	require.Equal(t, photo.String, *response.PhotoURL)
+	require.True(t, response.IsActive)
+}
+
+func TestAthleteService_GetAthleteByIDV1_MapsInactiveOrMissingToNotFound(t *testing.T) {
+	service := NewAthleteService(&mockAthleteRepository{getByIDFunc: func(context.Context, int64) (database.RootAthlete, error) {
+		return database.RootAthlete{}, sql.ErrNoRows
+	}})
+	_, err := service.GetAthleteByIDV1(context.Background(), 7)
+	require.ErrorIs(t, err, ErrAthleteNotFound)
+}
+
+func validUpdateRequest() model.PutAthleteV1Request {
+	return model.PutAthleteV1Request{FirstName: " Иван ", SecondName: " Иванов ",
+		BirthDate: utcDate(2010, time.January, 2)}
 }
 
 func strPtr(value string) *string { return &value }

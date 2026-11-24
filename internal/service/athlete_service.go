@@ -3,18 +3,24 @@ package service
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/WhiteMaks/go_academy_portal_service/autogenerate/database"
 	"github.com/WhiteMaks/go_academy_portal_service/internal/model"
 	"github.com/WhiteMaks/go_academy_portal_service/internal/repository"
 )
 
+var (
+	ErrAthleteNotFound = errors.New("athlete not found")
+)
+
 type AthleteService interface {
 	CreateAthleteV1(ctx context.Context, request model.PostAthleteV1Request) (model.AthleteV1Response, error)
 	GetAthletesV1(ctx context.Context) (model.GetAthletesV1Response, error)
+	GetAthleteByIDV1(ctx context.Context, id int64) (model.AthleteV1Response, error)
+	UpdateAthleteV1(ctx context.Context, id int64, request model.PutAthleteV1Request) (model.AthleteV1Response, error)
 }
 
 type athleteService struct {
@@ -57,6 +63,40 @@ func (s *athleteService) GetAthletesV1(ctx context.Context) (model.GetAthletesV1
 	return response, nil
 }
 
+func (s *athleteService) GetAthleteByIDV1(ctx context.Context, id int64) (model.AthleteV1Response, error) {
+	record, err := s.repository.GetAthleteByIDV1(ctx, id)
+	if errors.Is(err, sql.ErrNoRows) {
+		return model.AthleteV1Response{}, ErrAthleteNotFound
+	}
+	if err != nil {
+		return model.AthleteV1Response{}, err
+	}
+	return athleteResponse(record), nil
+}
+
+func (s *athleteService) UpdateAthleteV1(ctx context.Context, id int64, request model.PutAthleteV1Request) (model.AthleteV1Response, error) {
+	params := database.UpdateAthleteV1Params{
+		ID:               id,
+		SecondName:       strings.TrimSpace(request.SecondName),
+		FirstName:        strings.TrimSpace(request.FirstName),
+		MiddleName:       nullableRequestText(request.MiddleName),
+		BirthDate:        request.BirthDate,
+		Phone:            nullableRequestValue(request.Phone),
+		ParentSecondName: nullableRequestText(request.ParentSecondName),
+		ParentFirstName:  nullableRequestText(request.ParentFirstName),
+		ParentMiddleName: nullableRequestText(request.ParentMiddleName),
+		ParentPhone:      nullableRequestValue(request.ParentPhone),
+	}
+	record, err := s.repository.UpdateAthleteV1(ctx, params)
+	if errors.Is(err, sql.ErrNoRows) {
+		return model.AthleteV1Response{}, ErrAthleteNotFound
+	}
+	if err != nil {
+		return model.AthleteV1Response{}, err
+	}
+	return athleteResponse(record), nil
+}
+
 func nullableRequestText(value *string) sql.NullString {
 	if value == nil {
 		return sql.NullString{}
@@ -76,15 +116,18 @@ func nullableRequestValue(value string) sql.NullString {
 }
 
 func athleteResponse(record database.RootAthlete) model.AthleteV1Response {
-	year, month, day := record.BirthDate.Date()
 	return model.AthleteV1Response{
 		ID: strconv.FormatInt(record.ID, 10), SecondName: record.SecondName, FirstName: record.FirstName,
-		MiddleName: nullableString(record.MiddleName), BirthDate: time.Date(year, month, day, 0, 0, 0, 0, time.UTC),
-		PhotoURL: nullableString(record.PhotoUrl), Phone: nullableString(record.Phone),
+		MiddleName:       nullableString(record.MiddleName),
+		BirthDate:        record.BirthDate,
+		PhotoURL:         nullableString(record.PhotoUrl),
+		Phone:            nullableString(record.Phone),
 		ParentFirstName:  nullableString(record.ParentFirstName),
 		ParentSecondName: nullableString(record.ParentSecondName),
 		ParentMiddleName: nullableString(record.ParentMiddleName),
-		ParentPhone:      nullableString(record.ParentPhone), IsActive: record.IsActive,
+		ParentPhone:      nullableString(record.ParentPhone),
+		IsActive:         record.IsActive,
+		UpdatedAt:        record.UpdatedAt,
 	}
 }
 

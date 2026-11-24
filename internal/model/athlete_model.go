@@ -15,6 +15,18 @@ type PostAthleteV1Request struct {
 	ParentPhone      string    `json:"parentPhone" binding:"omitempty,min=11,max=16,e164,excludes=+0"`
 }
 
+type PutAthleteV1Request struct {
+	FirstName        string    `json:"firstName" binding:"required,min=1,max=100"`
+	SecondName       string    `json:"secondName" binding:"required,min=1,max=100"`
+	MiddleName       *string   `json:"middleName" binding:"omitempty,max=100"`
+	BirthDate        time.Time `json:"birthDate" binding:"required"`
+	Phone            string    `json:"phone" binding:"omitempty,min=11,max=16,e164,excludes=+0"`
+	ParentFirstName  *string   `json:"parentFirstName" binding:"omitempty,max=100"`
+	ParentSecondName *string   `json:"parentSecondName" binding:"omitempty,max=100"`
+	ParentMiddleName *string   `json:"parentMiddleName" binding:"omitempty,max=100"`
+	ParentPhone      string    `json:"parentPhone" binding:"omitempty,min=11,max=16,e164,excludes=+0"`
+}
+
 type AthleteV1Response struct {
 	ID               string    `json:"id"`
 	FirstName        string    `json:"firstName"`
@@ -28,6 +40,7 @@ type AthleteV1Response struct {
 	ParentMiddleName *string   `json:"parentMiddleName"`
 	ParentPhone      *string   `json:"parentPhone"`
 	IsActive         bool      `json:"isActive"`
+	UpdatedAt        time.Time `json:"updatedAt"`
 }
 
 type GetAthletesV1Response struct {
