@@ -7,6 +7,7 @@ import (
 	"github.com/WhiteMaks/go_academy_portal_service/autogenerate/database"
 	"github.com/WhiteMaks/go_academy_portal_service/internal/controller"
 	"github.com/WhiteMaks/go_academy_portal_service/internal/middleware"
+	"github.com/WhiteMaks/go_academy_portal_service/internal/model"
 	"github.com/WhiteMaks/go_academy_portal_service/internal/repository"
 	"github.com/WhiteMaks/go_academy_portal_service/internal/route"
 	"github.com/WhiteMaks/go_academy_portal_service/internal/service"
@@ -23,6 +24,13 @@ type Microservice struct {
 }
 
 func NewMicroservice(config util.Microservice, store database.Store) *Microservice {
+	if err := util.RegisterBindingValidators(); err != nil {
+		panic(err)
+	}
+	if err := model.RegisterAthleteBindingValidatorsFromGin(); err != nil {
+		panic(err)
+	}
+
 	tokenMaker := util.NewJWTTokenMaker(config.TokenKey, config.TokenLifeTime)
 
 	ms := &Microservice{
@@ -32,12 +40,15 @@ func NewMicroservice(config util.Microservice, store database.Store) *Microservi
 	}
 
 	userRepository := repository.NewUserRepository(ms.store)
+	athleteRepository := repository.NewAthleteRepository(ms.store)
 
 	microserviceService := service.NewMicroserviceService(userRepository)
 	userService := service.NewUserService(userRepository, ms.tokenMaker)
+	athleteService := service.NewAthleteService(athleteRepository)
 
 	microserviceController := controller.NewMicroserviceController(microserviceService)
 	userController := controller.NewUserController(userService)
+	athleteController := controller.NewAthleteController(athleteService, userService)
 
 	router := gin.Default()
 
@@ -60,6 +71,10 @@ func NewMicroservice(config util.Microservice, store database.Store) *Microservi
 
 	authRoutes.GET(route.ApiUserV1, userController.GetUserV1)
 	authRoutes.POST(route.ApiUserV1, userController.CreateUserV1)
+
+	authRoutes.POST(route.ApiAthleteV1, athleteController.CreateAthleteV1)
+	authRoutes.GET(route.ApiAthletesV1, athleteController.GetAthletesV1)
+	authRoutes.GET(route.ApiAthleteByIDV1, athleteController.GetAthleteV1)
 
 	ms.Router = router
 
