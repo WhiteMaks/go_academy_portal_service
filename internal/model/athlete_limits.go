@@ -7,7 +7,7 @@ const (
 	AthleteNoteMaxLen  = 2000
 	AthletePhoneMaxLen = 16 // E.164: '+' и до 15 цифр
 
-	AthletesListDefaultLimit = 50
-	AthletesListMaxLimit     = 200
+	AthletesListDefaultLimit = ListQueryDefaultLimit
+	AthletesListMaxLimit     = ListQueryMaxLimit
 	AthletesSearchQMaxLen    = 200
 )

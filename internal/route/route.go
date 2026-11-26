@@ -13,5 +13,12 @@ const (
 	ApiCoachesV1   = "/api/coaches/v1"
 	ApiCoachByIDV1 = "/api/coaches/v1/:id"
 
+	ApiBranchV1      = "/api/branch/v1"
+	ApiBranchesV1    = "/api/branches/v1"
+	ApiBranchByIDV1  = "/api/branches/v1/:id"
+	ApiHallV1        = "/api/hall/v1"
+	ApiBranchHallsV1 = "/api/branches/v1/:id/halls/v1"
+	ApiHallByIDV1    = "/api/halls/v1/:id"
+
 	ApiMicroserviceV1 = "/api/microservice/v1"
 )

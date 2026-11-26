@@ -20,5 +20,11 @@ func TestMain(m *testing.M) {
 	if err := model.RegisterCoachBindingValidatorsFromGin(); err != nil {
 		panic(err)
 	}
+	if err := model.RegisterBranchBindingValidatorsFromGin(); err != nil {
+		panic(err)
+	}
+	if err := model.RegisterHallBindingValidatorsFromGin(); err != nil {
+		panic(err)
+	}
 	os.Exit(m.Run())
 }

@@ -289,8 +289,6 @@ func normalizeAthletePhone(raw string) (string, error) {
 func normalizeAthletesPagination(limit, offset int) (int, int) {
 	if limit <= 0 {
 		limit = model.AthletesListDefaultLimit
-	} else if limit > model.AthletesListMaxLimit {
-		limit = model.AthletesListMaxLimit
 	}
 	if offset < 0 {
 		offset = 0

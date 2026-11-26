@@ -90,7 +90,7 @@ func TestCoachService_GetCoachesV1_WithQuery(t *testing.T) {
 		getCoachesV1Func: func(ctx context.Context, params database.GetCoachesV1Params) ([]database.RootCoach, error) {
 			require.True(t, params.PQ.Valid)
 			require.Equal(t, "Judo", params.PQ.String)
-			require.Equal(t, int32(50), params.PLimit.Int32)
+			require.Equal(t, int32(model.CoachesListDefaultLimit), params.PLimit.Int32)
 			return []database.RootCoach{record}, nil
 		},
 		countCoachesV1Func: func(ctx context.Context, pQ sql.NullString) (int64, error) {
@@ -105,7 +105,7 @@ func TestCoachService_GetCoachesV1_WithQuery(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, int64(1), response.Total)
 	require.Len(t, response.Coaches, 1)
-	require.Equal(t, 50, response.Limit)
+	require.Equal(t, model.CoachesListDefaultLimit, response.Limit)
 	require.Equal(t, coachTestBirthDate, response.Coaches[0].BirthDate)
 }
 

@@ -7,7 +7,7 @@ const (
 	CoachNoteMaxLen           = 2000
 	CoachPhoneMaxLen          = 16 // E.164: '+' и до 15 цифр
 
-	CoachesListDefaultLimit = 50
-	CoachesListMaxLimit     = 200
+	CoachesListDefaultLimit = ListQueryDefaultLimit
+	CoachesListMaxLimit     = ListQueryMaxLimit
 	CoachesSearchQMaxLen    = 200
 )

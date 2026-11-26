@@ -114,7 +114,7 @@ func TestAthleteController_GetAthletesV1_200(t *testing.T) {
 	expected := model.GetAthletesV1Response{
 		Athletes: []model.AthleteV1Response{},
 		Total:    0,
-		Limit:    50,
+		Limit:    model.AthletesListDefaultLimit,
 		Offset:   0,
 	}
 

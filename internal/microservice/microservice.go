@@ -33,6 +33,12 @@ func NewMicroservice(config util.Microservice, store database.Store) *Microservi
 	if err := model.RegisterCoachBindingValidatorsFromGin(); err != nil {
 		panic(err)
 	}
+	if err := model.RegisterBranchBindingValidatorsFromGin(); err != nil {
+		panic(err)
+	}
+	if err := model.RegisterHallBindingValidatorsFromGin(); err != nil {
+		panic(err)
+	}
 
 	tokenMaker := util.NewJWTTokenMaker(config.TokenKey, config.TokenLifeTime)
 
@@ -45,16 +51,22 @@ func NewMicroservice(config util.Microservice, store database.Store) *Microservi
 	userRepository := repository.NewUserRepository(ms.store)
 	athleteRepository := repository.NewAthleteRepository(ms.store)
 	coachRepository := repository.NewCoachRepository(ms.store)
+	branchRepository := repository.NewBranchRepository(ms.store)
+	hallRepository := repository.NewHallRepository(ms.store)
 
 	microserviceService := service.NewMicroserviceService(userRepository)
 	userService := service.NewUserService(userRepository, ms.tokenMaker)
 	athleteService := service.NewAthleteService(athleteRepository)
 	coachService := service.NewCoachService(coachRepository)
+	branchService := service.NewBranchService(branchRepository)
+	hallService := service.NewHallService(hallRepository, branchRepository)
 
 	microserviceController := controller.NewMicroserviceController(microserviceService)
 	userController := controller.NewUserController(userService)
 	athleteController := controller.NewAthleteController(athleteService, userService)
 	coachController := controller.NewCoachController(coachService, userService)
+	branchController := controller.NewBranchController(branchService, userService)
+	hallController := controller.NewHallController(hallService, userService)
 
 	router := gin.Default()
 
@@ -87,6 +99,16 @@ func NewMicroservice(config util.Microservice, store database.Store) *Microservi
 	authRoutes.GET(route.ApiCoachesV1, coachController.GetCoachesV1)
 	authRoutes.GET(route.ApiCoachByIDV1, coachController.GetCoachV1)
 	authRoutes.PUT(route.ApiCoachByIDV1, coachController.UpdateCoachV1)
+
+	authRoutes.POST(route.ApiBranchV1, branchController.CreateBranchV1)
+	authRoutes.GET(route.ApiBranchesV1, branchController.GetBranchesV1)
+	authRoutes.GET(route.ApiBranchHallsV1, hallController.GetBranchHallsV1)
+	authRoutes.GET(route.ApiBranchByIDV1, branchController.GetBranchV1)
+	authRoutes.PUT(route.ApiBranchByIDV1, branchController.UpdateBranchV1)
+
+	authRoutes.POST(route.ApiHallV1, hallController.CreateHallV1)
+	authRoutes.GET(route.ApiHallByIDV1, hallController.GetHallV1)
+	authRoutes.PUT(route.ApiHallByIDV1, hallController.UpdateHallV1)
 
 	ms.Router = router
 

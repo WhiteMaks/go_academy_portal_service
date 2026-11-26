@@ -236,8 +236,6 @@ func normalizeCoachPhone(raw string) (string, error) {
 func normalizeCoachesPagination(limit, offset int) (int, int) {
 	if limit <= 0 {
 		limit = model.CoachesListDefaultLimit
-	} else if limit > model.CoachesListMaxLimit {
-		limit = model.CoachesListMaxLimit
 	}
 	if offset < 0 {
 		offset = 0

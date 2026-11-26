@@ -51,12 +51,12 @@ DECLARE
 	v_offset INTEGER;
 BEGIN
 	v_q := NULLIF(btrim(coalesce(p_q, '')), '');
-	-- default/max must match Go model.AthletesListDefaultLimit / AthletesListMaxLimit
-	v_limit := coalesce(p_limit, 50);
+	-- default/max must match Go model.ListQueryDefaultLimit / ListQueryMaxLimit (20)
+	v_limit := coalesce(p_limit, 20);
 	IF v_limit <= 0 THEN
-		v_limit := 50;
-	ELSIF v_limit > 200 THEN
-		v_limit := 200;
+		v_limit := 20;
+	ELSIF v_limit > 20 THEN
+		RAISE EXCEPTION 'invalid limit' USING ERRCODE = '22023';
 	END IF;
 	v_offset := greatest(coalesce(p_offset, 0), 0);
 

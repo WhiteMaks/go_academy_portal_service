@@ -95,7 +95,7 @@ func TestAthleteService_GetAthletesV1_WithQuery(t *testing.T) {
 		getAthletesV1Func: func(ctx context.Context, params database.GetAthletesV1Params) ([]database.RootAthlete, error) {
 			require.True(t, params.PQ.Valid)
 			require.Equal(t, "15.03", params.PQ.String)
-			require.Equal(t, int32(50), params.PLimit.Int32)
+			require.Equal(t, int32(model.AthletesListDefaultLimit), params.PLimit.Int32)
 			return []database.RootAthlete{record}, nil
 		},
 		countAthletesV1Func: func(ctx context.Context, pQ sql.NullString) (int64, error) {
@@ -110,7 +110,7 @@ func TestAthleteService_GetAthletesV1_WithQuery(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, int64(1), response.Total)
 	require.Len(t, response.Athletes, 1)
-	require.Equal(t, 50, response.Limit)
+	require.Equal(t, model.AthletesListDefaultLimit, response.Limit)
 }
 
 func TestAthleteService_CreateAthleteV1_FutureBirthDate(t *testing.T) {
@@ -265,7 +265,7 @@ func TestAthleteService_UpdateAthleteV1_ParentPartial(t *testing.T) {
 	require.ErrorIs(t, err, ErrAthleteParentPartial)
 }
 
-func TestAthleteService_GetAthletesV1_CapsLimitAtMax(t *testing.T) {
+func TestAthleteService_GetAthletesV1_UsesMaxLimitWhenRequested(t *testing.T) {
 	mock := &mockAthleteRepository{
 		getAthletesV1Func: func(ctx context.Context, params database.GetAthletesV1Params) ([]database.RootAthlete, error) {
 			require.Equal(t, int32(model.AthletesListMaxLimit), params.PLimit.Int32)
