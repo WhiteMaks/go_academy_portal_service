@@ -12,6 +12,7 @@ type mockAthleteRepository struct {
 	getAthletesV1Func   func(ctx context.Context, params database.GetAthletesV1Params) ([]database.RootAthlete, error)
 	countAthletesV1Func func(ctx context.Context, pQ sql.NullString) (int64, error)
 	getAthleteV1Func    func(ctx context.Context, id int64) (database.RootAthlete, error)
+	updateAthleteV1Func func(ctx context.Context, params database.UpdateAthleteV1Params) (database.RootAthlete, error)
 }
 
 func (m *mockAthleteRepository) CreateAthleteV1(ctx context.Context, params database.CreateAthleteV1Params) (database.RootAthlete, error) {
@@ -28,4 +29,11 @@ func (m *mockAthleteRepository) CountAthletesV1(ctx context.Context, pQ sql.Null
 
 func (m *mockAthleteRepository) GetAthleteV1(ctx context.Context, id int64) (database.RootAthlete, error) {
 	return m.getAthleteV1Func(ctx, id)
+}
+
+func (m *mockAthleteRepository) UpdateAthleteV1(ctx context.Context, params database.UpdateAthleteV1Params) (database.RootAthlete, error) {
+	if m.updateAthleteV1Func == nil {
+		return database.RootAthlete{}, nil
+	}
+	return m.updateAthleteV1Func(ctx, params)
 }

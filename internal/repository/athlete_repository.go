@@ -12,6 +12,7 @@ type AthleteRepository interface {
 	GetAthletesV1(ctx context.Context, params database.GetAthletesV1Params) ([]database.RootAthlete, error)
 	CountAthletesV1(ctx context.Context, pQ sql.NullString) (int64, error)
 	GetAthleteV1(ctx context.Context, id int64) (database.RootAthlete, error)
+	UpdateAthleteV1(ctx context.Context, params database.UpdateAthleteV1Params) (database.RootAthlete, error)
 }
 
 type athleteRepository struct {
@@ -36,4 +37,8 @@ func (r *athleteRepository) CountAthletesV1(ctx context.Context, pQ sql.NullStri
 
 func (r *athleteRepository) GetAthleteV1(ctx context.Context, id int64) (database.RootAthlete, error) {
 	return r.store.GetAthleteV1(ctx, id)
+}
+
+func (r *athleteRepository) UpdateAthleteV1(ctx context.Context, params database.UpdateAthleteV1Params) (database.RootAthlete, error) {
+	return r.store.UpdateAthleteV1(ctx, params)
 }

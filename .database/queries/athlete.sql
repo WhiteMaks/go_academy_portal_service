@@ -28,3 +28,21 @@ SELECT root.count_athletes_v1(sqlc.narg('p_q'));
 -- name: GetAthleteV1 :one
 SELECT *
 FROM root.get_athlete_v1(sqlc.arg('p_id'));
+
+-- name: UpdateAthleteV1 :one
+SELECT *
+FROM root.update_athlete_v1(
+    sqlc.arg('p_id'),
+    sqlc.arg('p_last_name'),
+    sqlc.arg('p_first_name'),
+    sqlc.narg('p_patronymic'),
+    sqlc.arg('p_birth_date'),
+    sqlc.arg('p_phone'),
+    sqlc.narg('p_parent_last_name'),
+    sqlc.narg('p_parent_first_name'),
+    sqlc.narg('p_parent_patronymic'),
+    sqlc.narg('p_parent_birth_date'),
+    sqlc.narg('p_parent_phone'),
+    sqlc.narg('p_note'),
+    sqlc.arg('p_activity_status')
+);

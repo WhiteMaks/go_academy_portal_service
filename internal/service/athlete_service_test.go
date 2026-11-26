@@ -143,6 +143,128 @@ func TestAthleteService_GetAthletesV1_InvalidQuery(t *testing.T) {
 	require.ErrorIs(t, err, ErrAthleteListQuery)
 }
 
+func TestAthleteService_UpdateAthleteV1_Success(t *testing.T) {
+	athleteID := int64(7)
+	record := database.RootAthlete{
+		ID:             athleteID,
+		LastName:       "Petrov",
+		FirstName:      "Petr",
+		BirthDate:      time.Date(2012, 6, 1, 0, 0, 0, 0, time.UTC),
+		Phone:          "+79001234567",
+		ActivityStatus: database.RootAthleteActivityStatusActive,
+		CreatedAt:      time.Now().UTC(),
+		UpdatedAt:      time.Now().UTC(),
+	}
+
+	mock := &mockAthleteRepository{
+		updateAthleteV1Func: func(ctx context.Context, params database.UpdateAthleteV1Params) (database.RootAthlete, error) {
+			require.Equal(t, athleteID, params.PID)
+			require.Equal(t, "Petrov", params.PLastName)
+			require.Equal(t, "active", params.PActivityStatus)
+			return record, nil
+		},
+	}
+
+	svc := NewAthleteService(mock)
+	response, err := svc.UpdateAthleteV1(context.Background(), athleteID, model.PutAthleteV1Request{
+		LastName:       "Petrov",
+		FirstName:      "Petr",
+		BirthDate:      model.DateOnly{Time: time.Date(2012, 6, 1, 0, 0, 0, 0, time.UTC)},
+		Phone:          "+79001234567",
+		ActivityStatus: "active",
+	})
+
+	require.NoError(t, err)
+	require.Equal(t, athleteID, response.ID)
+	require.Equal(t, "active", response.ActivityStatus)
+}
+
+func TestAthleteService_UpdateAthleteV1_ActivityStatusInactive(t *testing.T) {
+	athleteID := int64(7)
+	record := database.RootAthlete{
+		ID:             athleteID,
+		LastName:       "Ivanov",
+		FirstName:      "Ivan",
+		BirthDate:      time.Date(2015, 3, 15, 0, 0, 0, 0, time.UTC),
+		Phone:          "+79001234567",
+		ActivityStatus: database.RootAthleteActivityStatusInactive,
+		CreatedAt:      time.Now().UTC(),
+		UpdatedAt:      time.Now().UTC(),
+	}
+
+	mock := &mockAthleteRepository{
+		updateAthleteV1Func: func(ctx context.Context, params database.UpdateAthleteV1Params) (database.RootAthlete, error) {
+			require.Equal(t, "inactive", params.PActivityStatus)
+			return record, nil
+		},
+	}
+
+	svc := NewAthleteService(mock)
+	response, err := svc.UpdateAthleteV1(context.Background(), athleteID, model.PutAthleteV1Request{
+		LastName:       "Ivanov",
+		FirstName:      "Ivan",
+		BirthDate:      model.DateOnly{Time: time.Date(2015, 3, 15, 0, 0, 0, 0, time.UTC)},
+		Phone:          "+79001234567",
+		ActivityStatus: "inactive",
+	})
+
+	require.NoError(t, err)
+	require.Equal(t, "inactive", response.ActivityStatus)
+}
+
+func TestAthleteService_UpdateAthleteV1_NotFound(t *testing.T) {
+	mock := &mockAthleteRepository{
+		updateAthleteV1Func: func(ctx context.Context, params database.UpdateAthleteV1Params) (database.RootAthlete, error) {
+			return database.RootAthlete{}, &pq.Error{Code: database.PgErrNoDataFound}
+		},
+	}
+
+	svc := NewAthleteService(mock)
+	_, err := svc.UpdateAthleteV1(context.Background(), 99, model.PutAthleteV1Request{
+		LastName:       "Ivanov",
+		FirstName:      "Ivan",
+		BirthDate:      model.DateOnly{Time: time.Date(2015, 3, 15, 0, 0, 0, 0, time.UTC)},
+		Phone:          "+79001234567",
+		ActivityStatus: "active",
+	})
+
+	require.ErrorIs(t, err, ErrAthleteNotFound)
+}
+
+func TestAthleteService_UpdateAthleteV1_PhoneConflict(t *testing.T) {
+	mock := &mockAthleteRepository{
+		updateAthleteV1Func: func(ctx context.Context, params database.UpdateAthleteV1Params) (database.RootAthlete, error) {
+			return database.RootAthlete{}, &pq.Error{Code: database.PgErrUniqueViolation}
+		},
+	}
+
+	svc := NewAthleteService(mock)
+	_, err := svc.UpdateAthleteV1(context.Background(), 7, model.PutAthleteV1Request{
+		LastName:       "Ivanov",
+		FirstName:      "Ivan",
+		BirthDate:      model.DateOnly{Time: time.Date(2015, 3, 15, 0, 0, 0, 0, time.UTC)},
+		Phone:          "+79005554433",
+		ActivityStatus: "active",
+	})
+
+	require.ErrorIs(t, err, ErrAthletePhoneConflict)
+}
+
+func TestAthleteService_UpdateAthleteV1_ParentPartial(t *testing.T) {
+	svc := NewAthleteService(&mockAthleteRepository{})
+	parentLast := "Sidorov"
+	_, err := svc.UpdateAthleteV1(context.Background(), 1, model.PutAthleteV1Request{
+		LastName:       "Ivanov",
+		FirstName:      "Ivan",
+		BirthDate:      model.DateOnly{Time: time.Date(2015, 3, 15, 0, 0, 0, 0, time.UTC)},
+		Phone:          "+79001234567",
+		ParentLastName: &parentLast,
+		ActivityStatus: "active",
+	})
+
+	require.ErrorIs(t, err, ErrAthleteParentPartial)
+}
+
 func TestAthleteService_GetAthletesV1_CapsLimitAtMax(t *testing.T) {
 	mock := &mockAthleteRepository{
 		getAthletesV1Func: func(ctx context.Context, params database.GetAthletesV1Params) ([]database.RootAthlete, error) {

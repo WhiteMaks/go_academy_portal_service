@@ -26,6 +26,7 @@ type AthleteService interface {
 	CreateAthleteV1(ctx context.Context, request model.PostAthleteV1Request) (model.AthleteV1Response, error)
 	GetAthletesV1(ctx context.Context, query model.GetAthletesV1Query) (model.GetAthletesV1Response, error)
 	GetAthleteV1(ctx context.Context, id int64) (model.AthleteV1Response, error)
+	UpdateAthleteV1(ctx context.Context, id int64, request model.PutAthleteV1Request) (model.AthleteV1Response, error)
 }
 
 type athleteService struct {
@@ -99,6 +100,43 @@ func (s *athleteService) GetAthleteV1(ctx context.Context, id int64) (model.Athl
 		return model.AthleteV1Response{}, classifyAthleteError(err)
 	}
 	return mapAthleteRecordToResponse(record), nil
+}
+
+func (s *athleteService) UpdateAthleteV1(ctx context.Context, id int64, request model.PutAthleteV1Request) (model.AthleteV1Response, error) {
+	params, err := prepareUpdateAthleteV1Params(id, request)
+	if err != nil {
+		return model.AthleteV1Response{}, err
+	}
+
+	record, err := s.athleteRepository.UpdateAthleteV1(ctx, params)
+	if err != nil {
+		return model.AthleteV1Response{}, classifyAthleteError(err)
+	}
+
+	return mapAthleteRecordToResponse(record), nil
+}
+
+func prepareUpdateAthleteV1Params(id int64, request model.PutAthleteV1Request) (database.UpdateAthleteV1Params, error) {
+	createParams, err := prepareCreateAthleteV1Params(request.AsCreateShape())
+	if err != nil {
+		return database.UpdateAthleteV1Params{}, err
+	}
+
+	return database.UpdateAthleteV1Params{
+		PID:               id,
+		PLastName:         createParams.PLastName,
+		PFirstName:        createParams.PFirstName,
+		PBirthDate:        createParams.PBirthDate,
+		PPhone:            createParams.PPhone,
+		PPatronymic:       createParams.PPatronymic,
+		PNote:             createParams.PNote,
+		PParentLastName:   createParams.PParentLastName,
+		PParentFirstName:  createParams.PParentFirstName,
+		PParentPatronymic: createParams.PParentPatronymic,
+		PParentBirthDate:  createParams.PParentBirthDate,
+		PParentPhone:      createParams.PParentPhone,
+		PActivityStatus:   request.ActivityStatus,
+	}, nil
 }
 
 func prepareCreateAthleteV1Params(request model.PostAthleteV1Request) (database.CreateAthleteV1Params, error) {

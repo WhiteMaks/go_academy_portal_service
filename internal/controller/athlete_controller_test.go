@@ -234,6 +234,136 @@ func TestAthleteController_GetAthleteV1_200(t *testing.T) {
 	require.Equal(t, http.StatusOK, recorder.Code)
 }
 
+func TestAthleteController_UpdateAthleteV1_200(t *testing.T) {
+	expected := model.AthleteV1Response{
+		ID:             7,
+		LastName:       "Ivanov",
+		FirstName:      "Ivan",
+		BirthDate:      model.DateOnly{Time: time.Date(2015, 3, 15, 0, 0, 0, 0, time.UTC)},
+		Phone:          "+79001234567",
+		ActivityStatus: "inactive",
+	}
+
+	athleteMock := &mockAthleteService{
+		updateAthleteV1Func: func(ctx context.Context, id int64, request model.PutAthleteV1Request) (model.AthleteV1Response, error) {
+			require.Equal(t, int64(7), id)
+			require.Equal(t, "inactive", request.ActivityStatus)
+			return expected, nil
+		},
+	}
+	userMock := &mockUserService{
+		hasAccessFunc: func(ctx context.Context, payload *util.Payload, roles []database.RootUserRole) bool {
+			return true
+		},
+	}
+
+	recorder := httptest.NewRecorder()
+	testContext, _ := gin.CreateTestContext(recorder)
+	testContext.Request = tPreparePutRequest(route.ApiAthletesV1+"/7", model.PutAthleteV1Request{
+		LastName:       "Ivanov",
+		FirstName:      "Ivan",
+		BirthDate:      model.DateOnly{Time: time.Date(2015, 3, 15, 0, 0, 0, 0, time.UTC)},
+		Phone:          "+79001234567",
+		ActivityStatus: "inactive",
+	})
+	testContext.Params = gin.Params{{Key: "id", Value: "7"}}
+	testContext.Set(middleware.AuthorizationPayload, util.NewTokenPayload("admin", string(database.RootUserRoleAdmin), time.Minute))
+
+	controller := NewAthleteController(athleteMock, userMock)
+	controller.UpdateAthleteV1(testContext)
+
+	require.Equal(t, http.StatusOK, recorder.Code)
+	var actual model.AthleteV1Response
+	tPrepareResponse(recorder.Body, &actual)
+	require.Equal(t, "inactive", actual.ActivityStatus)
+}
+
+func TestAthleteController_UpdateAthleteV1_404(t *testing.T) {
+	athleteMock := &mockAthleteService{
+		updateAthleteV1Func: func(ctx context.Context, id int64, request model.PutAthleteV1Request) (model.AthleteV1Response, error) {
+			return model.AthleteV1Response{}, service.ErrAthleteNotFound
+		},
+	}
+	userMock := &mockUserService{
+		hasAccessFunc: func(ctx context.Context, payload *util.Payload, roles []database.RootUserRole) bool {
+			return true
+		},
+	}
+
+	recorder := httptest.NewRecorder()
+	testContext, _ := gin.CreateTestContext(recorder)
+	testContext.Request = tPreparePutRequest(route.ApiAthletesV1+"/99", model.PutAthleteV1Request{
+		LastName:       "Ivanov",
+		FirstName:      "Ivan",
+		BirthDate:      model.DateOnly{Time: time.Date(2015, 3, 15, 0, 0, 0, 0, time.UTC)},
+		Phone:          "+79001234567",
+		ActivityStatus: "active",
+	})
+	testContext.Params = gin.Params{{Key: "id", Value: "99"}}
+	testContext.Set(middleware.AuthorizationPayload, util.NewTokenPayload("admin", string(database.RootUserRoleAdmin), time.Minute))
+
+	controller := NewAthleteController(athleteMock, userMock)
+	controller.UpdateAthleteV1(testContext)
+
+	require.Equal(t, http.StatusNotFound, recorder.Code)
+}
+
+func TestAthleteController_UpdateAthleteV1_403(t *testing.T) {
+	athleteMock := &mockAthleteService{}
+	userMock := &mockUserService{
+		hasAccessFunc: func(ctx context.Context, payload *util.Payload, roles []database.RootUserRole) bool {
+			return false
+		},
+	}
+
+	recorder := httptest.NewRecorder()
+	testContext, _ := gin.CreateTestContext(recorder)
+	testContext.Request = tPreparePutRequest(route.ApiAthletesV1+"/7", model.PutAthleteV1Request{
+		LastName:       "Ivanov",
+		FirstName:      "Ivan",
+		BirthDate:      model.DateOnly{Time: time.Date(2015, 3, 15, 0, 0, 0, 0, time.UTC)},
+		Phone:          "+79001234567",
+		ActivityStatus: "active",
+	})
+	testContext.Params = gin.Params{{Key: "id", Value: "7"}}
+	testContext.Set(middleware.AuthorizationPayload, util.NewTokenPayload("coach", string(database.RootUserRoleCoach), time.Minute))
+
+	controller := NewAthleteController(athleteMock, userMock)
+	controller.UpdateAthleteV1(testContext)
+
+	require.Equal(t, http.StatusForbidden, recorder.Code)
+}
+
+func TestAthleteController_UpdateAthleteV1_409_phoneConflict(t *testing.T) {
+	athleteMock := &mockAthleteService{
+		updateAthleteV1Func: func(ctx context.Context, id int64, request model.PutAthleteV1Request) (model.AthleteV1Response, error) {
+			return model.AthleteV1Response{}, service.ErrAthletePhoneConflict
+		},
+	}
+	userMock := &mockUserService{
+		hasAccessFunc: func(ctx context.Context, payload *util.Payload, roles []database.RootUserRole) bool {
+			return true
+		},
+	}
+
+	recorder := httptest.NewRecorder()
+	testContext, _ := gin.CreateTestContext(recorder)
+	testContext.Request = tPreparePutRequest(route.ApiAthletesV1+"/7", model.PutAthleteV1Request{
+		LastName:       "Ivanov",
+		FirstName:      "Ivan",
+		BirthDate:      model.DateOnly{Time: time.Date(2015, 3, 15, 0, 0, 0, 0, time.UTC)},
+		Phone:          "+79009998877",
+		ActivityStatus: "active",
+	})
+	testContext.Params = gin.Params{{Key: "id", Value: "7"}}
+	testContext.Set(middleware.AuthorizationPayload, util.NewTokenPayload("admin", string(database.RootUserRoleAdmin), time.Minute))
+
+	controller := NewAthleteController(athleteMock, userMock)
+	controller.UpdateAthleteV1(testContext)
+
+	require.Equal(t, http.StatusConflict, recorder.Code)
+}
+
 func TestAthleteController_GetAthleteV1_400_invalidID(t *testing.T) {
 	athleteMock := &mockAthleteService{}
 	userMock := &mockUserService{

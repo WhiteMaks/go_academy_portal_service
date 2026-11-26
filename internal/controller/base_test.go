@@ -18,6 +18,11 @@ func tPrepareGetRequest(url string) *http.Request {
 	return httptest.NewRequest(http.MethodGet, url, nil)
 }
 
+func tPreparePutRequest(url string, body any) *http.Request {
+	jsonBody, _ := json.Marshal(body)
+	return httptest.NewRequest(http.MethodPut, url, bytes.NewReader(jsonBody))
+}
+
 func tPrepareResponse(buffer *bytes.Buffer, response any) {
 	responseBytes, _ := io.ReadAll(buffer)
 

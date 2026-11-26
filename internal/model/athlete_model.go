@@ -51,6 +51,38 @@ type PostAthleteV1Request struct {
 	Note             *string   `json:"note,omitempty" binding:"omitempty,athlete_note_max"`
 }
 
+type PutAthleteV1Request struct {
+	LastName         string    `json:"last_name" binding:"required,min=1,athlete_name_max"`
+	FirstName        string    `json:"first_name" binding:"required,min=1,athlete_name_max"`
+	Patronymic       *string   `json:"patronymic,omitempty" binding:"omitempty,min=1,athlete_name_max"`
+	BirthDate        DateOnly  `json:"birth_date" binding:"required"`
+	Phone            string    `json:"phone" binding:"required,e164"`
+	ParentLastName   *string   `json:"parent_last_name,omitempty" binding:"omitempty,min=1,athlete_name_max"`
+	ParentFirstName  *string   `json:"parent_first_name,omitempty" binding:"omitempty,min=1,athlete_name_max"`
+	ParentPatronymic *string   `json:"parent_patronymic,omitempty" binding:"omitempty,min=1,athlete_name_max"`
+	ParentBirthDate  *DateOnly `json:"parent_birth_date,omitempty"`
+	ParentPhone      *string   `json:"parent_phone,omitempty" binding:"omitempty,e164"`
+	Note             *string   `json:"note,omitempty" binding:"omitempty,athlete_note_max"`
+	ActivityStatus   string    `json:"activity_status" binding:"required,oneof=active inactive"`
+}
+
+// AsCreateShape returns the shared card fields for create/update validation helpers.
+func (r PutAthleteV1Request) AsCreateShape() PostAthleteV1Request {
+	return PostAthleteV1Request{
+		LastName:         r.LastName,
+		FirstName:        r.FirstName,
+		Patronymic:       r.Patronymic,
+		BirthDate:        r.BirthDate,
+		Phone:            r.Phone,
+		ParentLastName:   r.ParentLastName,
+		ParentFirstName:  r.ParentFirstName,
+		ParentPatronymic: r.ParentPatronymic,
+		ParentBirthDate:  r.ParentBirthDate,
+		ParentPhone:      r.ParentPhone,
+		Note:             r.Note,
+	}
+}
+
 type AthleteV1Response struct {
 	ID               int64      `json:"id"`
 	LastName         string     `json:"last_name"`

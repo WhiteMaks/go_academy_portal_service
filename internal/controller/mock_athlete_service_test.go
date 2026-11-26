@@ -10,6 +10,7 @@ type mockAthleteService struct {
 	createAthleteV1Func func(ctx context.Context, request model.PostAthleteV1Request) (model.AthleteV1Response, error)
 	getAthletesV1Func   func(ctx context.Context, query model.GetAthletesV1Query) (model.GetAthletesV1Response, error)
 	getAthleteV1Func    func(ctx context.Context, id int64) (model.AthleteV1Response, error)
+	updateAthleteV1Func func(ctx context.Context, id int64, request model.PutAthleteV1Request) (model.AthleteV1Response, error)
 }
 
 func (m *mockAthleteService) CreateAthleteV1(ctx context.Context, request model.PostAthleteV1Request) (model.AthleteV1Response, error) {
@@ -22,4 +23,11 @@ func (m *mockAthleteService) GetAthletesV1(ctx context.Context, query model.GetA
 
 func (m *mockAthleteService) GetAthleteV1(ctx context.Context, id int64) (model.AthleteV1Response, error) {
 	return m.getAthleteV1Func(ctx, id)
+}
+
+func (m *mockAthleteService) UpdateAthleteV1(ctx context.Context, id int64, request model.PutAthleteV1Request) (model.AthleteV1Response, error) {
+	if m.updateAthleteV1Func == nil {
+		return model.AthleteV1Response{}, nil
+	}
+	return m.updateAthleteV1Func(ctx, id, request)
 }

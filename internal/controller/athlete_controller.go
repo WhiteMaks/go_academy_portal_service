@@ -18,6 +18,7 @@ type AthleteController interface {
 	CreateAthleteV1(ctx *gin.Context)
 	GetAthletesV1(ctx *gin.Context)
 	GetAthleteV1(ctx *gin.Context)
+	UpdateAthleteV1(ctx *gin.Context)
 }
 
 type athleteController struct {
@@ -84,6 +85,32 @@ func (c *athleteController) GetAthleteV1(ctx *gin.Context) {
 	}
 
 	response, err := c.athleteService.GetAthleteV1(ctx.Request.Context(), id)
+	if err != nil {
+		writeAthleteServiceError(ctx, err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, response)
+}
+
+func (c *athleteController) UpdateAthleteV1(ctx *gin.Context) {
+	if !c.requireAdmin(ctx) {
+		return
+	}
+
+	id, err := parseAthleteID(ctx.Param("id"))
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, service.PrepareErrorResponse(errors.New("invalid athlete id")))
+		return
+	}
+
+	var request model.PutAthleteV1Request
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		ctx.JSON(http.StatusBadRequest, service.PrepareErrorResponse(mapAthleteCreateBindError(err)))
+		return
+	}
+
+	response, err := c.athleteService.UpdateAthleteV1(ctx.Request.Context(), id, request)
 	if err != nil {
 		writeAthleteServiceError(ctx, err)
 		return
