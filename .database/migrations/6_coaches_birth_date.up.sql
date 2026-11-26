@@ -1,0 +1,5 @@
+ALTER TABLE root.coaches
+	ADD COLUMN birth_date DATE NOT NULL DEFAULT DATE '1990-01-01';
+
+ALTER TABLE root.coaches
+	ALTER COLUMN birth_date DROP DEFAULT;

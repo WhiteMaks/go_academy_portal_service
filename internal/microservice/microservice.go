@@ -30,6 +30,9 @@ func NewMicroservice(config util.Microservice, store database.Store) *Microservi
 	if err := model.RegisterAthleteBindingValidatorsFromGin(); err != nil {
 		panic(err)
 	}
+	if err := model.RegisterCoachBindingValidatorsFromGin(); err != nil {
+		panic(err)
+	}
 
 	tokenMaker := util.NewJWTTokenMaker(config.TokenKey, config.TokenLifeTime)
 
@@ -41,14 +44,17 @@ func NewMicroservice(config util.Microservice, store database.Store) *Microservi
 
 	userRepository := repository.NewUserRepository(ms.store)
 	athleteRepository := repository.NewAthleteRepository(ms.store)
+	coachRepository := repository.NewCoachRepository(ms.store)
 
 	microserviceService := service.NewMicroserviceService(userRepository)
 	userService := service.NewUserService(userRepository, ms.tokenMaker)
 	athleteService := service.NewAthleteService(athleteRepository)
+	coachService := service.NewCoachService(coachRepository)
 
 	microserviceController := controller.NewMicroserviceController(microserviceService)
 	userController := controller.NewUserController(userService)
 	athleteController := controller.NewAthleteController(athleteService, userService)
+	coachController := controller.NewCoachController(coachService, userService)
 
 	router := gin.Default()
 
@@ -76,6 +82,11 @@ func NewMicroservice(config util.Microservice, store database.Store) *Microservi
 	authRoutes.GET(route.ApiAthletesV1, athleteController.GetAthletesV1)
 	authRoutes.GET(route.ApiAthleteByIDV1, athleteController.GetAthleteV1)
 	authRoutes.PUT(route.ApiAthleteByIDV1, athleteController.UpdateAthleteV1)
+
+	authRoutes.POST(route.ApiCoachV1, coachController.CreateCoachV1)
+	authRoutes.GET(route.ApiCoachesV1, coachController.GetCoachesV1)
+	authRoutes.GET(route.ApiCoachByIDV1, coachController.GetCoachV1)
+	authRoutes.PUT(route.ApiCoachByIDV1, coachController.UpdateCoachV1)
 
 	ms.Router = router
 

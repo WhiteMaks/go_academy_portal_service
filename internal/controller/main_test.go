@@ -17,5 +17,8 @@ func TestMain(m *testing.M) {
 	if err := model.RegisterAthleteBindingValidatorsFromGin(); err != nil {
 		panic(err)
 	}
+	if err := model.RegisterCoachBindingValidatorsFromGin(); err != nil {
+		panic(err)
+	}
 	os.Exit(m.Run())
 }
